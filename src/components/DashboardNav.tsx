@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   GraduationCap, LayoutDashboard, Users, UserSquare2, ClipboardList,
   CheckSquare, Headphones, LogOut, Handshake, Receipt, ShieldCheck, ScrollText,
-  Landmark, SearchCheck,
+  Landmark, SearchCheck, Settings,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -22,6 +22,7 @@ const nav = [
   { href: "/dashboard/billing", label: "Billing", icon: Receipt, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/team", label: "Team", icon: ShieldCheck, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: ScrollText, roles: ["OWNER", "ADMIN"] },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings, roles: null },
 ];
 
 export function DashboardNav({ orgName, userName, role }: { orgName: string; userName: string; role: string }) {

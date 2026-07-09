@@ -108,9 +108,25 @@ model User {
   uploadedDocuments    Document[]    @relation("UploadedBy")
   activityLogs         ActivityLog[] @relation("ActivityAuthor")
   auditLogs            AuditLog[]    @relation("AuditActor")
+  passwordResetTokens  PasswordResetToken[]
 
   @@unique([organizationId, email])
   @@map("users")
+}
+
+// Single-use tokens for the forgot-password flow. We store a hash of the
+// token (never the raw value) so a leaked DB row can't be replayed directly.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 // ─────────────────────────────────────────────
