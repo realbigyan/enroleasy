@@ -1,0 +1,706 @@
+// EnrolEasy — multi-tenant B2B SaaS schema
+// Consultancy CRM + IELTS/PTE/Duolingo test-prep platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// TENANCY & IDENTITY
+// Every record in the CRM/test-prep domain is scoped to an Organization
+// (the consultancy that pays for EnrolEasy). Students who log in to
+// practise tests also belong to the org that enrolled them.
+// ─────────────────────────────────────────────
+
+enum Role {
+  OWNER                 // consultancy account owner (billing, org settings)
+  ADMIN                 // full CRM + test-prep management
+  COUNSELOR             // manages leads/students/applications, no billing
+  TRAINER               // delivers classes, no CRM/billing access
+  EXAMINER              // grades writing/speaking attempts
+  CONTENT_MANAGER       // manages question bank / mock tests
+  DOCUMENTATION_OFFICER // handles visa/application paperwork
+  STUDENT               // practice-platform-only access, scoped to own records
+}
+
+enum SubscriptionPlan {
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model Organization {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  logoUrl       String?
+  country       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users         User[]
+  leads         Lead[]
+  students      Student[]
+  applications  Application[]
+  tasks         Task[]
+  notes         Note[]
+  destinations  Destination[]
+  mockTests     MockTest[]
+  subscription  Subscription?
+  partners      Partner[]
+  invoicers     Invoicer[]
+  invoices      Invoice[]
+  documents     Document[]
+  activityLogs  ActivityLog[]
+  auditLogs     AuditLog[]
+  institutions  Institution[]
+
+  @@map("organizations")
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId    String             @unique
+  plan              SubscriptionPlan   @default(STARTER)
+  status            SubscriptionStatus @default(TRIALING)
+  seats             Int                @default(5)
+  trialEndsAt       DateTime?
+  currentPeriodEnd  DateTime?
+  stripeCustomerId  String?
+  stripeSubId       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  email          String
+  passwordHash   String
+  role           Role         @default(COUNSELOR)
+  avatarUrl      String?
+  isActive       Boolean      @default(true)
+  isSuperAdmin   Boolean      @default(false) // platform-level: can manage the shared global institution catalog
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  assignedLeads       Lead[]        @relation("AssignedCounselor")
+  assignedTasks       Task[]        @relation("AssignedTo")
+  notes               Note[]
+  studentProfile      Student?      @relation("StudentUser")
+  testAttempts        TestAttempt[]
+  uploadedDocuments    Document[]    @relation("UploadedBy")
+  activityLogs         ActivityLog[] @relation("ActivityAuthor")
+  auditLogs            AuditLog[]    @relation("AuditActor")
+
+  @@unique([organizationId, email])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// PARTNERS — referral agents, B2B application partners, exam bodies
+// ─────────────────────────────────────────────
+
+enum PartnerType {
+  REFERRAL
+  B2B_APPLICATION
+  EXAM_BODY
+}
+
+model Partner {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  type           PartnerType  @default(REFERRAL)
+  contactEmail   String?
+  contactPhone   String?
+  commissionPct  Float?       // default commission rate for referrals through this partner
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  referredLeads    Lead[]
+  referredStudents Student[]
+  invoices         Invoice[]
+
+  @@index([organizationId])
+  @@map("partners")
+}
+
+// ─────────────────────────────────────────────
+// CRM DOMAIN
+// ─────────────────────────────────────────────
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  TRIAL_BOOKED
+  TRIAL_DONE
+  QUALIFIED
+  COUNSELING
+  APPLICATION_STARTED
+  OFFER_RECEIVED
+  VISA_STAGE
+  ENROLLED
+  LOST
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  WALK_IN
+  SOCIAL_MEDIA
+  EVENT
+  PARTNER_AGENT
+  OTHER
+}
+
+model Lead {
+  id                  String       @id @default(cuid())
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId      String
+  fullName            String
+  email               String?
+  phone               String?
+  source              LeadSource   @default(WEBSITE)
+  stage               LeadStage    @default(NEW)
+  interestedCountry   String?
+  targetIntake        String?      // e.g. "Fall 2026"
+  targetScore         String?      // e.g. "Band 7.0"
+  tags                String[]     @default([])
+  assignedCounselor   User?        @relation("AssignedCounselor", fields: [assignedCounselorId], references: [id])
+  assignedCounselorId String?
+  referredBy          Partner?     @relation(fields: [referredByPartnerId], references: [id])
+  referredByPartnerId String?
+  convertedStudent    Student?
+  tasks               Task[]
+  notes               Note[]
+  activityLogs        ActivityLog[]
+  lastActivityAt      DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([organizationId, stage])
+  @@map("leads")
+}
+
+model Destination {
+  id             String        @id @default(cuid())
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  country        String
+  university     String
+  course         String
+  intake         String
+  tuitionFeeUsd  Int?
+  applications   Application[]
+  createdAt      DateTime      @default(now())
+
+  @@map("destinations")
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  OFFER_CONDITIONAL
+  OFFER_UNCONDITIONAL
+  DEPOSIT_PAID
+  VISA_APPLIED
+  VISA_APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+model Application {
+  id             String            @id @default(cuid())
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  student        Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String
+  destination    Destination       @relation(fields: [destinationId], references: [id])
+  destinationId  String
+  status         ApplicationStatus @default(DRAFT)
+  requiredIelts  Float?
+  requiredPte    Int?
+  submittedAt    DateTime?
+  decisionAt     DateTime?
+  notes          Note[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([organizationId, status])
+  @@map("applications")
+}
+
+model Student {
+  id              String        @id @default(cuid())
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  fromLead        Lead?         @relation(fields: [fromLeadId], references: [id])
+  fromLeadId      String?       @unique
+  user            User?         @relation("StudentUser", fields: [userId], references: [id])
+  userId          String?       @unique
+  referredBy      Partner?      @relation(fields: [referredByPartnerId], references: [id])
+  referredByPartnerId String?
+  fullName        String
+  email           String?
+  phone           String?
+  passportNo      String?
+  passportExpiry  DateTime?
+  countryOfBirth  String?
+  currentCountry  String?
+  dob             DateTime?
+  tags            String[]      @default([])
+  isChurned       Boolean       @default(false)
+  // Academic profile used for course-eligibility matching
+  academicGpaPercent Float?
+  gapYears           Int?
+  englishTestType    StudentLanguageStatus?
+  englishScore       Float?
+  lastActivityAt  DateTime?
+  archivedAt      DateTime?
+  applications    Application[]
+  testAttempts    TestAttempt[]
+  tasks           Task[]
+  notes           Note[]
+  educationRecords  EducationRecord[]
+  emergencyContacts EmergencyContact[]
+  examBookings      ExamBooking[]
+  documents         Document[]
+  invoices          Invoice[]
+  activityLogs      ActivityLog[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("students")
+}
+
+model EducationRecord {
+  id             String   @id @default(cuid())
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String
+  institution    String
+  qualification  String   // e.g. "Bachelor's Degree"
+  fieldOfStudy   String?
+  yearCompleted  Int?
+  gpaOrPercentage String?
+  createdAt      DateTime @default(now())
+
+  @@map("education_records")
+}
+
+enum EmergencyContactKind {
+  PRIMARY
+  SECONDARY
+}
+
+model EmergencyContact {
+  id        String               @id @default(cuid())
+  student   Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  kind      EmergencyContactKind
+  name      String
+  relation  String?
+  phone     String?
+  email     String?
+
+  @@unique([studentId, kind])
+  @@map("emergency_contacts")
+}
+
+enum ExamBookingStatus {
+  BOOKED
+  COMPLETED
+  CANCELLED
+}
+
+model ExamBooking {
+  id           String            @id @default(cuid())
+  student      Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId    String
+  testType     TestType
+  examDate     DateTime
+  center       String?
+  status       ExamBookingStatus @default(BOOKED)
+  resultDate   DateTime?
+  resultScore  Float?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([studentId])
+  @@map("exam_bookings")
+}
+
+enum DocumentType {
+  PASSPORT
+  TRANSCRIPT
+  VISA
+  OFFER_LETTER
+  CERTIFICATE
+  OTHER
+}
+
+model Document {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  student        Student?     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String?
+  type           DocumentType @default(OTHER)
+  fileName       String
+  url            String       // Cloudinary secure_url
+  publicId       String?      // Cloudinary public_id, for deletion
+  uploadedBy     User?        @relation("UploadedBy", fields: [uploadedById], references: [id])
+  uploadedById   String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, studentId])
+  @@map("documents")
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  title          String
+  dueAt          DateTime?
+  status         TaskStatus   @default(OPEN)
+  assignedTo     User?        @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId   String?
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId         String?
+  student        Student?     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("tasks")
+}
+
+model Note {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  body           String
+  author         User         @relation(fields: [authorId], references: [id])
+  authorId       String
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId         String?
+  student        Student?     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String?
+  application    Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId  String?
+  createdAt      DateTime     @default(now())
+
+  @@map("notes")
+}
+
+// Unified interaction log shown as an "Activity Timeline" on lead/student profiles.
+// Distinct from Note (a written note) — this also captures system events like
+// stage changes, calls logged, emails sent, etc.
+model ActivityLog {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId         String?
+  student        Student?     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String?
+  author         User?        @relation("ActivityAuthor", fields: [authorId], references: [id])
+  authorId       String?
+  type           String       // e.g. "call", "email", "meeting", "stage_change", "note"
+  description    String
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, leadId])
+  @@index([organizationId, studentId])
+  @@map("activity_logs")
+}
+
+// Tracks admin actions with before/after snapshots for compliance/accountability.
+model AuditLog {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  actor          User?        @relation("AuditActor", fields: [actorId], references: [id])
+  actorId        String?
+  action         String       // e.g. "update", "delete", "archive"
+  entityType     String       // e.g. "Student", "Lead", "Invoice"
+  entityId       String
+  beforeJson     Json?
+  afterJson      Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────
+// BILLING & INVOICING
+// Supports multiple legal "invoicer" entities issuing invoices to either
+// students or partners (e.g. commission invoices).
+// ─────────────────────────────────────────────
+
+model Invoicer {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  invoicePrefix  String       // e.g. "UPS" -> UPS-2026-0001
+  receiptPrefix  String?
+  logoUrl        String?
+  isDefault      Boolean      @default(false)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  invoices       Invoice[]
+
+  @@index([organizationId])
+  @@map("invoicers")
+}
+
+enum BilledToType {
+  STUDENT
+  PARTNER
+}
+
+enum FeeType {
+  MANUAL
+  MEMBERSHIP
+  COMMISSION
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  VOID
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  invoicer       Invoicer      @relation(fields: [invoicerId], references: [id])
+  invoicerId     String
+  invoiceNumber  String        // generated as `${invoicer.invoicePrefix}-${year}-${seq}`
+  billedToType   BilledToType
+  student        Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String?
+  partner        Partner?      @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId      String?
+  feeType        FeeType       @default(MANUAL)
+  description    String?
+  amount         Float
+  currency       String        @default("USD")
+  status         InvoiceStatus @default(UNPAID)
+  issueDate      DateTime      @default(now())
+  dueDate        DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, status])
+  @@map("invoices")
+}
+
+// ─────────────────────────────────────────────
+// TEST-PREP DOMAIN — IELTS / PTE / Duolingo
+// ─────────────────────────────────────────────
+
+enum TestType {
+  IELTS
+  PTE
+  DUOLINGO
+}
+
+enum SkillArea {
+  LISTENING
+  READING
+  WRITING
+  SPEAKING
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  FILL_BLANK
+  ESSAY
+  SPEAKING_PROMPT
+  TRUE_FALSE_NOTGIVEN
+  MATCHING
+}
+
+model Question {
+  id           String       @id @default(cuid())
+  testType     TestType
+  skill        SkillArea
+  type         QuestionType
+  prompt       String
+  passageText  String?
+  audioUrl     String?
+  imageUrl     String?
+  options      Json?        // for multiple choice / matching
+  correctAnswer Json?
+  maxScore     Int          @default(1)
+  difficulty   Int          @default(1) // 1-5
+  mockTestId   String?
+  mockTest     MockTest?    @relation(fields: [mockTestId], references: [id], onDelete: SetNull)
+  createdAt    DateTime     @default(now())
+
+  answers      Answer[]
+
+  @@index([testType, skill])
+  @@map("questions")
+}
+
+model MockTest {
+  id             String       @id @default(cuid())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String?      // null = global/shared library test
+  title          String
+  testType       TestType
+  durationMins   Int
+  isPublished    Boolean      @default(true)
+  questions      Question[]
+  attempts       TestAttempt[]
+  createdAt      DateTime     @default(now())
+
+  @@map("mock_tests")
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  SCORED
+}
+
+model TestAttempt {
+  id            String        @id @default(cuid())
+  mockTest      MockTest      @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  mockTestId    String
+  student       Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId     String?
+  user          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String?
+  status        AttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime      @default(now())
+  submittedAt   DateTime?
+  overallBand   Float?        // IELTS band / PTE 10-90 / Duolingo 10-160, normalized display
+  listeningScore Float?
+  readingScore   Float?
+  writingScore   Float?
+  speakingScore  Float?
+  answers        Answer[]
+
+  @@index([studentId])
+  @@map("test_attempts")
+}
+
+model Answer {
+  id            String      @id @default(cuid())
+  attempt       TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId     String
+  question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId    String
+  responseText  String?
+  responseAudioUrl String?
+  isCorrect     Boolean?
+  scoreAwarded  Float?
+  aiFeedback    String?     // placeholder for future AI-scoring integration
+
+  @@unique([attemptId, questionId])
+  @@map("answers")
+}
+
+// ─────────────────────────────────────────────
+// INSTITUTION & COURSE CATALOG
+// Manually-curated catalog of institutions and their courses, used to run
+// eligibility-based course search against a student's academic profile.
+// Institution.organizationId is nullable: null = shared/global catalog
+// (managed by a platform superadmin), non-null = private to that consultancy.
+// ─────────────────────────────────────────────
+
+enum LanguageTestType {
+  IELTS
+  PTE
+  DUOLINGO
+  MOI          // Medium of Instruction certificate in lieu of a test
+  NOT_REQUIRED
+}
+
+enum StudentLanguageStatus {
+  IELTS
+  PTE
+  DUOLINGO
+  MOI
+  NONE
+}
+
+model Institution {
+  id             String        @id @default(cuid())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String?       // null = shared global catalog
+  name           String
+  country        String
+  website        String?
+  logoUrl        String?
+  introduction   String?       // "university intro" description
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  courses        Course[]
+
+  @@index([organizationId, country])
+  @@map("institutions")
+}
+
+model Course {
+  id                String           @id @default(cuid())
+  institution       Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institutionId     String
+  name              String
+  level             String?          // e.g. "Undergraduate", "Postgraduate", "Diploma"
+  durationMonths    Int?
+  feeAmount         Float?
+  feeCurrency       String           @default("USD")
+  careerOutcomes    String?          // career prospects / outcomes description
+  description       String?          // course description
+  // Entry requirements
+  minGpaPercent     Float?
+  maxGapYears       Int?
+  languageTestType  LanguageTestType @default(NOT_REQUIRED)
+  languageMinScore  Float?
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([institutionId])
+  @@map("courses")
+}
