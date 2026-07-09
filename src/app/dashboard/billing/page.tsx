@@ -26,6 +26,7 @@ export default function BillingPage() {
   const [showForm, setShowForm] = useState(false);
   const [showInvoicerForm, setShowInvoicerForm] = useState(false);
   const [form, setForm] = useState({
+    documentKind: "INVOICE" as "INVOICE" | "RECEIPT",
     billedToType: "STUDENT" as "STUDENT" | "PARTNER",
     studentId: "",
     partnerId: "",
@@ -67,9 +68,10 @@ export default function BillingPage() {
         description: form.description || undefined,
         amount: Number(form.amount),
         currency: form.currency,
+        markPaid: form.documentKind === "RECEIPT",
       }),
     });
-    setForm({ billedToType: "STUDENT", studentId: "", partnerId: "", feeType: "MANUAL", description: "", amount: "", currency: "USD" });
+    setForm({ documentKind: "INVOICE", billedToType: "STUDENT", studentId: "", partnerId: "", feeType: "MANUAL", description: "", amount: "", currency: "USD" });
     setShowForm(false);
     load();
   }
@@ -113,7 +115,7 @@ export default function BillingPage() {
             onClick={() => setShowForm((v) => !v)}
             className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
-            <Plus className="h-4 w-4" /> New Invoice
+            <Plus className="h-4 w-4" /> New Invoice / Receipt
           </button>
         </div>
       </div>
@@ -145,6 +147,18 @@ export default function BillingPage() {
 
       {showForm && (
         <form onSubmit={createInvoice} className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-4">
+          <div className="flex overflow-hidden rounded-md border border-slate-300 text-sm sm:col-span-4">
+            {(["INVOICE", "RECEIPT"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setForm({ ...form, documentKind: k })}
+                className={`flex-1 px-3 py-2 font-medium ${form.documentKind === k ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+              >
+                {k === "INVOICE" ? "Invoice (payment pending)" : "Receipt (payment already received)"}
+              </button>
+            ))}
+          </div>
           <select value={form.billedToType} onChange={(e) => setForm({ ...form, billedToType: e.target.value as "STUDENT" | "PARTNER" })}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm">
             <option value="STUDENT">Bill a student</option>
@@ -175,7 +189,7 @@ export default function BillingPage() {
             onChange={(e) => setForm({ ...form, currency: e.target.value })}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
           <button type="submit" className="sm:col-span-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-            Create invoice
+            {form.documentKind === "RECEIPT" ? "Create receipt" : "Create invoice"}
           </button>
         </form>
       )}

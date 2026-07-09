@@ -13,6 +13,10 @@ const createSchema = z.object({
   amount: z.number().positive(),
   currency: z.string().default("USD"),
   dueDate: z.string().datetime().optional().nullable(),
+  // A receipt is just an invoice created already-paid: no dunning needed, no
+  // bank/QR shown on the printed document, numbered with the invoicer's
+  // receiptPrefix instead of invoicePrefix (falls back to invoicePrefix if unset).
+  markPaid: z.boolean().optional().default(false),
 });
 
 async function generateInvoiceNumber(organizationId: string, invoicerId: string, prefix: string) {
@@ -56,7 +60,8 @@ export async function POST(req: NextRequest) {
       throw new ApiError(400, "No valid invoicer found — create an invoicer first");
     }
 
-    const invoiceNumber = await generateInvoiceNumber(session.organizationId, invoicer.id, invoicer.invoicePrefix);
+    const prefix = body.markPaid ? invoicer.receiptPrefix ?? invoicer.invoicePrefix : invoicer.invoicePrefix;
+    const invoiceNumber = await generateInvoiceNumber(session.organizationId, invoicer.id, prefix);
 
     const invoice = await prisma.invoice.create({
       data: {
@@ -71,6 +76,8 @@ export async function POST(req: NextRequest) {
         amount: body.amount,
         currency: body.currency,
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
+        status: body.markPaid ? "PAID" : "UNPAID",
+        paidAt: body.markPaid ? new Date() : null,
       },
       include: { invoicer: true, student: true, partner: true },
     });

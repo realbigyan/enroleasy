@@ -117,6 +117,10 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
             {[invoice.invoicer.footerWebsite, invoice.invoicer.footerPhone, invoice.invoicer.footerEmail].filter(Boolean).join("  ·  ")}
           </div>
         )}
+
+        {invoice.status === "PAID" && (
+          <p className="mt-2 text-center text-[10px] text-slate-400">This payment is non-refundable.</p>
+        )}
       </div>
     </div>
   );
