@@ -47,7 +47,7 @@ export function DashboardNav({
   }
 
   return (
-    <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
+    <aside className="flex w-64 flex-col border-r border-slate-200 bg-white print:hidden">
       <div className="flex items-center gap-2 border-b border-slate-200 px-6 py-5 font-semibold">
         <GraduationCap className="h-6 w-6 text-indigo-600" /> EnrolEasy
       </div>

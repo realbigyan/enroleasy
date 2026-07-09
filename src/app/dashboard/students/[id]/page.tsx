@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { DocumentManager } from "@/components/DocumentManager";
 import { ActivityTimeline } from "@/components/student/ActivityTimeline";
 import {
-  TravelDetails,
-  AcademicProfilePanel,
+  StudentOverviewPanel,
   EducationPanel,
   EmergencyContactsPanel,
   ExamBookingsPanel,
   ArchiveButton,
 } from "@/components/student/StudentDetailPanels";
+import { PrintButton } from "@/components/student/PrintButton";
 
 export default async function StudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,7 +33,7 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
 
   return (
     <div>
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between print:mb-4">
         <div>
           <h1 className="text-2xl font-semibold">
             {student.fullName}
@@ -43,19 +43,21 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
           {student.referredBy && (
             <p className="mt-1 text-xs text-slate-400">Referred by {student.referredBy.name}</p>
           )}
-          {student.tags.length > 0 && (
-            <div className="mt-2 flex gap-1">
-              {student.tags.map((t: string) => (
-                <span key={t} className="rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600">{t}</span>
-              ))}
-            </div>
-          )}
         </div>
-        <ArchiveButton studentId={student.id} archived={!!student.archivedAt} />
+        <div className="flex items-center gap-2 print:hidden">
+          <PrintButton />
+          <ArchiveButton studentId={student.id} archived={!!student.archivedAt} />
+        </div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <TravelDetails student={{ ...student, passportExpiry: student.passportExpiry?.toISOString() ?? null, archivedAt: student.archivedAt?.toISOString() ?? null }} />
+        <StudentOverviewPanel
+          student={{
+            ...student,
+            dob: student.dob?.toISOString() ?? null,
+            passportExpiry: student.passportExpiry?.toISOString() ?? null,
+          }}
+        />
 
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="font-semibold">Applications</h2>
@@ -73,8 +75,6 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
             </ul>
           )}
         </div>
-
-        <AcademicProfilePanel student={student} />
 
         <EducationPanel studentId={student.id} records={student.educationRecords} />
         <EmergencyContactsPanel studentId={student.id} contacts={student.emergencyContacts} />
@@ -118,7 +118,9 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <DocumentManager studentId={student.id} />
-        <ActivityTimeline studentId={student.id} />
+        <div className="print:hidden">
+          <ActivityTimeline studentId={student.id} />
+        </div>
       </div>
 
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">

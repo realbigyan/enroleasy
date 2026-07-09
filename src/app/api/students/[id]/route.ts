@@ -8,6 +8,7 @@ const updateSchema = z.object({
   fullName: z.string().min(2).optional(),
   email: z.string().email().optional().nullable(),
   phone: z.string().optional().nullable(),
+  dob: z.string().datetime().optional().nullable(),
   passportNo: z.string().optional().nullable(),
   passportExpiry: z.string().datetime().optional().nullable(),
   countryOfBirth: z.string().optional().nullable(),
@@ -62,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: {
         ...body,
         passportExpiry: body.passportExpiry ? new Date(body.passportExpiry) : undefined,
+        dob: body.dob ? new Date(body.dob) : undefined,
       },
     });
     await logAudit({

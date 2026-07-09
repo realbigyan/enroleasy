@@ -3,9 +3,17 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 
+const DOCUMENT_TYPES = [
+  "PASSPORT", "TRANSCRIPT", "VISA", "OFFER_LETTER", "CERTIFICATE", "OTHER",
+  "PERSONAL_ID", "PERSONAL_ACADEMIC", "PERSONAL_ENGLISH", "PERSONAL_CV", "PERSONAL_WORK_EXPERIENCE",
+  "SPOUSE_ID", "SPOUSE_ACADEMIC", "SPOUSE_ENGLISH", "SPOUSE_CV", "SPOUSE_WORK_EXPERIENCE", "SPOUSE_MARRIAGE_CERTIFICATE",
+  "SPONSOR_ID", "SPONSOR_RELATIONSHIP", "SPONSOR_PROOF_OF_INCOME",
+  "BANK_LOAN", "BANK_BALANCE_CERTIFICATE",
+] as const;
+
 const createSchema = z.object({
   studentId: z.string(),
-  type: z.enum(["PASSPORT", "TRANSCRIPT", "VISA", "OFFER_LETTER", "CERTIFICATE", "OTHER"]),
+  type: z.enum(DOCUMENT_TYPES),
   fileName: z.string(),
   url: z.string().url(),
   publicId: z.string().optional().nullable(),

@@ -367,12 +367,37 @@ model ExamBooking {
 }
 
 enum DocumentType {
+  // Legacy/general types, kept for backward compatibility with existing docs
   PASSPORT
   TRANSCRIPT
   VISA
   OFFER_LETTER
   CERTIFICATE
   OTHER
+
+  // Personal
+  PERSONAL_ID
+  PERSONAL_ACADEMIC
+  PERSONAL_ENGLISH
+  PERSONAL_CV
+  PERSONAL_WORK_EXPERIENCE
+
+  // Spouse
+  SPOUSE_ID
+  SPOUSE_ACADEMIC
+  SPOUSE_ENGLISH
+  SPOUSE_CV
+  SPOUSE_WORK_EXPERIENCE
+  SPOUSE_MARRIAGE_CERTIFICATE
+
+  // Sponsors
+  SPONSOR_ID
+  SPONSOR_RELATIONSHIP
+  SPONSOR_PROOF_OF_INCOME
+
+  // Bank
+  BANK_LOAN
+  BANK_BALANCE_CERTIFICATE
 }
 
 model Document {
