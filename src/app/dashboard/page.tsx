@@ -64,7 +64,7 @@ export default async function DashboardOverview() {
   ];
 
   // Snapshot funnel: how many leads currently sit at or past each stage.
-  const stageIndex = new Map(LEAD_FUNNEL_STAGES.map((s, i) => [s, i]));
+  const stageIndex = new Map<string, number>(LEAD_FUNNEL_STAGES.map((s, i) => [s, i]));
   const atOrPastCounts = LEAD_FUNNEL_STAGES.map((stage, i) =>
     allLeadsForFunnel.filter((l: (typeof allLeadsForFunnel)[number]) => (stageIndex.get(l.stage) ?? -1) >= i).length
   );
