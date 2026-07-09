@@ -16,7 +16,7 @@ const FROM = process.env.RESEND_FROM_EMAIL ?? "EnrolEasy <onboarding@resend.dev>
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const resend = getClient();
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: FROM,
     to,
     subject: "Reset your EnrolEasy password",
@@ -34,4 +34,13 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
       </div>
     `,
   });
+
+  // The Resend SDK resolves with { data, error } instead of throwing on
+  // failure (invalid sender domain, bad recipient, rate limit, etc.) — surface
+  // that as a thrown error so callers/logs actually see it.
+  if (error) {
+    throw new Error(`Resend failed to send: ${error.name ?? "unknown"} — ${error.message ?? JSON.stringify(error)}`);
+  }
+
+  return data;
 }
