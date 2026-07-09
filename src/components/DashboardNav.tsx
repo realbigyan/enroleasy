@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   GraduationCap, LayoutDashboard, Users, UserSquare2, ClipboardList,
   CheckSquare, Headphones, LogOut, Handshake, Receipt, ShieldCheck, ScrollText,
-  Landmark, SearchCheck, Settings,
+  Landmark, SearchCheck, Settings, Crown,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -23,9 +23,20 @@ const nav = [
   { href: "/dashboard/team", label: "Team", icon: ShieldCheck, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: ScrollText, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, roles: null },
+  { href: "/dashboard/superadmin", label: "Superadmin", icon: Crown, roles: null, superAdminOnly: true },
 ];
 
-export function DashboardNav({ orgName, userName, role }: { orgName: string; userName: string; role: string }) {
+export function DashboardNav({
+  orgName,
+  userName,
+  role,
+  isSuperAdmin,
+}: {
+  orgName: string;
+  userName: string;
+  role: string;
+  isSuperAdmin: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -43,6 +54,7 @@ export function DashboardNav({ orgName, userName, role }: { orgName: string; use
       <nav className="flex-1 space-y-1 p-3">
         {nav
           .filter((item) => !item.roles || item.roles.includes(role))
+          .filter((item) => !item.superAdminOnly || isSuperAdmin)
           .map((item) => {
             const active = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(item.href));
             return (

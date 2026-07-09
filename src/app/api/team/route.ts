@@ -37,6 +37,20 @@ export async function POST(req: NextRequest) {
     });
     if (existing) throw new ApiError(409, "A user with this email already exists");
 
+    const [activeStaffCount, subscription] = await Promise.all([
+      prisma.user.count({
+        where: { organizationId: session.organizationId, role: { not: "STUDENT" }, isActive: true },
+      }),
+      prisma.subscription.findUnique({ where: { organizationId: session.organizationId } }),
+    ]);
+    const seatLimit = subscription?.seats ?? 5;
+    if (activeStaffCount >= seatLimit) {
+      throw new ApiError(
+        403,
+        `Seat limit reached (${seatLimit}). Deactivate a staff member or ask your admin to upgrade the plan to add more.`
+      );
+    }
+
     const passwordHash = await hashPassword(body.password);
     const user = await prisma.user.create({
       data: {
