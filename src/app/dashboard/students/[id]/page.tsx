@@ -55,7 +55,7 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <TravelDetails student={{ ...student, passportExpiry: student.passportExpiry?.toISOString() ?? null }} />
+        <TravelDetails student={{ ...student, passportExpiry: student.passportExpiry?.toISOString() ?? null, archivedAt: student.archivedAt?.toISOString() ?? null }} />
 
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="font-semibold">Applications</h2>
