@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 
 type Invoicer = { id: string; name: string; invoicePrefix: string; isDefault: boolean; isActive: boolean };
@@ -182,8 +183,11 @@ export default function BillingPage() {
       {invoicers.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2 text-xs text-slate-500">
           Invoicers: {invoicers.map((ic) => (
-            <span key={ic.id} className="rounded bg-slate-100 px-2 py-1">
+            <span key={ic.id} className="flex items-center gap-1.5 rounded bg-slate-100 px-2 py-1">
               {ic.name} ({ic.invoicePrefix}){ic.isDefault ? " · default" : ""}
+              <Link href={`/dashboard/billing/invoicers/${ic.id}`} className="font-medium text-indigo-600 hover:underline">
+                Edit branding
+              </Link>
             </span>
           ))}
         </div>
@@ -207,7 +211,11 @@ export default function BillingPage() {
             <tbody>
               {invoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium">{inv.invoiceNumber}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link href={`/dashboard/billing/invoices/${inv.id}`} className="text-indigo-600 hover:underline">
+                      {inv.invoiceNumber}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3">
                     {inv.student?.fullName ?? inv.partner?.name ?? "—"}
                     <span className="ml-1 text-xs text-slate-400">{inv.billedToType}</span>

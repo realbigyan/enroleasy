@@ -3,11 +3,28 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
 
+const brandingFields = {
+  receiptPrefix: z.string().optional().nullable(),
+  logoUrl: z.string().url().optional().nullable(),
+  addressLine1: z.string().optional().nullable(),
+  addressLine2: z.string().optional().nullable(),
+  taxIdType: z.enum(["PAN", "VAT"]).optional().nullable(),
+  taxIdNumber: z.string().optional().nullable(),
+  bankAccountName: z.string().optional().nullable(),
+  bankAccountNumber: z.string().optional().nullable(),
+  bankName: z.string().optional().nullable(),
+  bankBranch: z.string().optional().nullable(),
+  bankSwift: z.string().optional().nullable(),
+  qrCodeUrl: z.string().url().optional().nullable(),
+  footerWebsite: z.string().optional().nullable(),
+  footerPhone: z.string().optional().nullable(),
+  footerEmail: z.string().email().optional().nullable(),
+};
+
 const createSchema = z.object({
   name: z.string().min(2),
   invoicePrefix: z.string().min(2).max(10),
-  receiptPrefix: z.string().optional().nullable(),
-  logoUrl: z.string().url().optional().nullable(),
+  ...brandingFields,
 });
 
 export async function GET() {

@@ -549,6 +549,11 @@ model AuditLog {
 // students or partners (e.g. commission invoices).
 // ─────────────────────────────────────────────
 
+enum TaxIdType {
+  PAN
+  VAT
+}
+
 model Invoicer {
   id             String       @id @default(cuid())
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -559,6 +564,20 @@ model Invoicer {
   logoUrl        String?
   isDefault      Boolean      @default(false)
   isActive       Boolean      @default(true)
+  // Branding/legal details rendered on the printable invoice/receipt
+  addressLine1     String?
+  addressLine2     String?
+  taxIdType        TaxIdType?
+  taxIdNumber      String?
+  bankAccountName   String?
+  bankAccountNumber String?
+  bankName          String?
+  bankBranch        String?
+  bankSwift         String?
+  qrCodeUrl         String?   // e.g. payment QR shown on the receipt
+  footerWebsite     String?
+  footerPhone       String?
+  footerEmail       String?
   createdAt      DateTime     @default(now())
 
   invoices       Invoice[]
