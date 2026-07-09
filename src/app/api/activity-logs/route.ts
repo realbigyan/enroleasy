@@ -6,6 +6,7 @@ import { requireSession, handleApiError } from "@/lib/api-guard";
 const createSchema = z.object({
   leadId: z.string().optional().nullable(),
   studentId: z.string().optional().nullable(),
+  applicationId: z.string().optional().nullable(),
   type: z.string().default("note"),
   description: z.string().min(1),
 });
@@ -15,11 +16,13 @@ export async function GET(req: NextRequest) {
     const session = await requireSession();
     const leadId = req.nextUrl.searchParams.get("leadId");
     const studentId = req.nextUrl.searchParams.get("studentId");
+    const applicationId = req.nextUrl.searchParams.get("applicationId");
     const logs = await prisma.activityLog.findMany({
       where: {
         organizationId: session.organizationId,
         ...(leadId ? { leadId } : {}),
         ...(studentId ? { studentId } : {}),
+        ...(applicationId ? { applicationId } : {}),
       },
       include: { author: true },
       orderBy: { createdAt: "desc" },

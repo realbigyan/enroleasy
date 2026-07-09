@@ -55,7 +55,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR"]);
+    const session = await requireSession(["OWNER", "ADMIN", "ADMIN_ASSIST", "COUNSELOR"]);
     const before = await assertOwned(session.organizationId, id);
     const body = updateSchema.parse(await req.json());
     const student = await prisma.student.update({

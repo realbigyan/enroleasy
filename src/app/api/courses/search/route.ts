@@ -28,7 +28,7 @@ function meetsLanguage(
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession();
+    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"]);
     const body = searchSchema.parse(await req.json());
 
     let gpaPercent = body.gpaPercent ?? null;

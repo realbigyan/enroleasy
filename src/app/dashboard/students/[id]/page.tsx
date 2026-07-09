@@ -11,6 +11,7 @@ import {
   ArchiveButton,
 } from "@/components/student/StudentDetailPanels";
 import { PrintButton } from "@/components/student/PrintButton";
+import { ApplicationsPanel } from "@/components/student/ApplicationsPanel";
 
 export default async function StudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -59,22 +60,11 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
           }}
         />
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="font-semibold">Applications</h2>
-          {student.applications.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No applications yet.</p>
-          ) : (
-            <ul className="mt-3 space-y-3 text-sm">
-              {student.applications.map((a: (typeof student.applications)[number]) => (
-                <li key={a.id} className="border-t border-slate-100 pt-3 first:border-0 first:pt-0">
-                  <p className="font-medium">{a.destination.university} — {a.destination.course}</p>
-                  <p className="text-slate-500">{a.destination.country} · {a.destination.intake}</p>
-                  <p className="mt-1 inline-block rounded bg-slate-100 px-2 py-0.5 text-xs">{a.status.replace(/_/g, " ")}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <ApplicationsPanel
+          studentId={student.id}
+          applications={student.applications}
+          canCreate={["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"].includes(session?.role ?? "")}
+        />
 
         <EducationPanel studentId={student.id} records={student.educationRecords} />
         <EmergencyContactsPanel studentId={student.id} contacts={student.emergencyContacts} />

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { logAudit } from "@/lib/audit";
 
-const STAFF_ROLES = ["OWNER", "ADMIN", "COUNSELOR", "TRAINER", "EXAMINER", "CONTENT_MANAGER", "DOCUMENTATION_OFFICER"] as const;
+const STAFF_ROLES = ["OWNER", "ADMIN", "ADMIN_ASSIST", "COUNSELOR", "TRAINER", "EXAMINER", "CONTENT_MANAGER", "DOCUMENTATION_OFFICER"] as const;
 
 const updateSchema = z.object({
   role: z.enum(STAFF_ROLES).optional(),

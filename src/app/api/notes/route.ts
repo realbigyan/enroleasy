@@ -12,7 +12,7 @@ const createSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR"]);
+    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"]);
     const body = createSchema.parse(await req.json());
     const note = await prisma.note.create({
       data: { ...body, authorId: session.userId, organizationId: session.organizationId },

@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await requireSession(["OWNER", "ADMIN"]);
+    const session = await requireSession(["OWNER", "ADMIN", "ADMIN_ASSIST", "COUNSELOR", "DOCUMENTATION_OFFICER"]);
     const existing = await prisma.invoice.findUnique({ where: { id } });
     if (!existing || existing.organizationId !== session.organizationId) throw new ApiError(404, "Invoice not found");
 

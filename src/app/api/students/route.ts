@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR"]);
+    const session = await requireSession(["OWNER", "ADMIN", "ADMIN_ASSIST", "COUNSELOR"]);
     const body = createSchema.parse(await req.json());
     const student = await prisma.student.create({
       data: { ...body, organizationId: session.organizationId },

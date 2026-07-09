@@ -15,7 +15,7 @@ const updateSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR"]);
+    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"]);
     const existing = await prisma.application.findUnique({ where: { id } });
     if (!existing || existing.organizationId !== session.organizationId) {
       throw new ApiError(404, "Application not found");

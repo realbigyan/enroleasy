@@ -44,3 +44,27 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
 
   return data;
 }
+
+export async function sendNotificationEmail(to: string, title: string, body: string, link?: string) {
+  const resend = getClient();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://enroleasy.com";
+  const fullLink = link ? (link.startsWith("http") ? link : `${appUrl}${link}`) : null;
+  const { data, error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: title,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color: #4338ca;">${title}</h2>
+        <p>${body}</p>
+        ${fullLink ? `<p><a href="${fullLink}" style="display: inline-block; background: #4f46e5; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">View in EnrolEasy</a></p>` : ""}
+      </div>
+    `,
+  });
+
+  if (error) {
+    throw new Error(`Resend failed to send: ${error.name ?? "unknown"} — ${error.message ?? JSON.stringify(error)}`);
+  }
+
+  return data;
+}

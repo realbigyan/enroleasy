@@ -19,6 +19,7 @@ datasource db {
 enum Role {
   OWNER                 // consultancy account owner (billing, org settings)
   ADMIN                 // full CRM + test-prep management
+  ADMIN_ASSIST          // front-office: students, documents, invoices/receipts
   COUNSELOR             // manages leads/students/applications, no billing
   TRAINER               // delivers classes, no CRM/billing access
   EXAMINER              // grades writing/speaking attempts
@@ -65,6 +66,7 @@ model Organization {
   activityLogs  ActivityLog[]
   auditLogs     AuditLog[]
   institutions  Institution[]
+  notifications Notification[]
 
   @@map("organizations")
 }
@@ -109,6 +111,7 @@ model User {
   activityLogs         ActivityLog[] @relation("ActivityAuthor")
   auditLogs            AuditLog[]    @relation("AuditActor")
   passwordResetTokens  PasswordResetToken[]
+  notifications        Notification[]
 
   @@unique([organizationId, email])
   @@map("users")
@@ -246,6 +249,28 @@ enum ApplicationStatus {
   WITHDRAWN
 }
 
+// Manually-tracked, granular application stage kept by the Documentation
+// Officer. Distinct from ApplicationStatus (a coarse system-wide status) —
+// this mirrors the real-world offline process of dealing with universities
+// and visa offices, which varies by destination country. OTHER + a free-text
+// label covers countries with a different process.
+enum ApplicationStage {
+  WAITING_KEY_DOCUMENTS
+  APPLICATION
+  OFFER_RECEIVED
+  OFFER_DENIED
+  DOCUMENTATION
+  WAITING_GS_APPROVAL
+  GS_APPROVED
+  GS_REJECTED
+  WAITING_VISA_LODGEMENT
+  VISA_LODGED
+  VISA_GRANTED
+  VISA_REFUSED
+  LOST
+  OTHER
+}
+
 model Application {
   id             String            @id @default(cuid())
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -260,6 +285,12 @@ model Application {
   submittedAt    DateTime?
   decisionAt     DateTime?
   notes          Note[]
+  activityLogs   ActivityLog[]
+  // Manually-tracked stage (Documentation Officer). Nullable: not every
+  // application has entered the manual tracking workflow yet.
+  currentStage          ApplicationStage?
+  currentStageOther     String?   // free-text label when currentStage = OTHER
+  currentStageUpdatedAt DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -473,6 +504,8 @@ model ActivityLog {
   leadId         String?
   student        Student?     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId      String?
+  application    Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId  String?
   author         User?        @relation("ActivityAuthor", fields: [authorId], references: [id])
   authorId       String?
   type           String       // e.g. "call", "email", "meeting", "stage_change", "note"
@@ -481,6 +514,7 @@ model ActivityLog {
 
   @@index([organizationId, leadId])
   @@index([organizationId, studentId])
+  @@index([organizationId, applicationId])
   @@map("activity_logs")
 }
 
@@ -744,4 +778,23 @@ model Course {
 
   @@index([institutionId])
   @@map("courses")
+}
+
+// In-app alerts for role-targeted events, e.g. "a counsellor created an
+// application" pinged to Documentation Officers. Read state is per-recipient.
+model Notification {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  recipient      User         @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId    String
+  type           String       // e.g. "application_created"
+  title          String
+  body           String?
+  link           String?      // e.g. /dashboard/students/{id}
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, recipientId, read])
+  @@map("notifications")
 }

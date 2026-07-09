@@ -8,6 +8,7 @@ import {
   Landmark, SearchCheck, Settings, Crown,
 } from "lucide-react";
 import clsx from "clsx";
+import { NotificationBell } from "./NotificationBell";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, roles: null },
@@ -17,7 +18,7 @@ const nav = [
   { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare, roles: null },
   { href: "/dashboard/test-prep", label: "Test Prep", icon: Headphones, roles: null },
   { href: "/dashboard/institutions", label: "Institutions", icon: Landmark, roles: null },
-  { href: "/dashboard/course-search", label: "Course Search", icon: SearchCheck, roles: null },
+  { href: "/dashboard/course-search", label: "Course Search", icon: SearchCheck, roles: ["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"] },
   { href: "/dashboard/partners", label: "Partners", icon: Handshake, roles: ["OWNER", "ADMIN", "COUNSELOR"] },
   { href: "/dashboard/billing", label: "Billing", icon: Receipt, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/team", label: "Team", icon: ShieldCheck, roles: ["OWNER", "ADMIN"] },
@@ -48,8 +49,11 @@ export function DashboardNav({
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white print:hidden">
-      <div className="flex items-center gap-2 border-b border-slate-200 px-6 py-5 font-semibold">
-        <GraduationCap className="h-6 w-6 text-indigo-600" /> EnrolEasy
+      <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-6 py-5">
+        <span className="flex items-center gap-2 font-semibold">
+          <GraduationCap className="h-6 w-6 text-indigo-600" /> EnrolEasy
+        </span>
+        <NotificationBell />
       </div>
       <nav className="flex-1 space-y-1 p-3">
         {nav

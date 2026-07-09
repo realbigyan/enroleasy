@@ -6,7 +6,7 @@ import { cloudinary } from "@/lib/cloudinary";
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await requireSession(["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"]);
+    const session = await requireSession(["OWNER", "ADMIN", "ADMIN_ASSIST", "COUNSELOR", "DOCUMENTATION_OFFICER"]);
     const document = await prisma.document.findUnique({ where: { id } });
     if (!document || document.organizationId !== session.organizationId) {
       throw new ApiError(404, "Document not found");
