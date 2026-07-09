@@ -8,6 +8,7 @@ type Application = {
   id: string;
   status: string;
   destination: { university: string; course: string; country: string; intake: string };
+  assignedDocOfficer: { id: string; name: string } | null;
 };
 
 type Destination = {
@@ -16,6 +17,13 @@ type Destination = {
   course: string;
   country: string;
   intake: string;
+};
+
+type StaffMember = {
+  id: string;
+  name: string;
+  role: string;
+  isActive: boolean;
 };
 
 export function ApplicationsPanel({
@@ -30,8 +38,10 @@ export function ApplicationsPanel({
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [loadingDestinations, setLoadingDestinations] = useState(false);
+  const [docOfficers, setDocOfficers] = useState<StaffMember[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
   const [destinationId, setDestinationId] = useState("");
+  const [assignedDocOfficerId, setAssignedDocOfficerId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,11 +49,15 @@ export function ApplicationsPanel({
     setShowForm(true);
     setError(null);
     if (destinations.length === 0) {
-      setLoadingDestinations(true);
-      const res = await fetch("/api/destinations");
-      const data = await res.json();
-      setDestinations(data.destinations ?? []);
-      setLoadingDestinations(false);
+      setLoadingOptions(true);
+      const [destRes, teamRes] = await Promise.all([fetch("/api/destinations"), fetch("/api/team")]);
+      const destData = await destRes.json();
+      const teamData = await teamRes.json();
+      setDestinations(destData.destinations ?? []);
+      setDocOfficers(
+        (teamData.staff ?? []).filter((s: StaffMember) => s.role === "DOCUMENTATION_OFFICER" && s.isActive)
+      );
+      setLoadingOptions(false);
     }
   }
 
@@ -56,12 +70,13 @@ export function ApplicationsPanel({
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, destinationId }),
+        body: JSON.stringify({ studentId, destinationId, assignedDocOfficerId: assignedDocOfficerId || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create application");
       setShowForm(false);
       setDestinationId("");
+      setAssignedDocOfficerId("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create application");
@@ -86,8 +101,8 @@ export function ApplicationsPanel({
 
       {showForm && (
         <div className="print:hidden mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-          {loadingDestinations ? (
-            <p className="text-sm text-slate-500">Loading destinations…</p>
+          {loadingOptions ? (
+            <p className="text-sm text-slate-500">Loading options…</p>
           ) : destinations.length === 0 ? (
             <p className="text-sm text-slate-500">
               No destinations/courses set up yet. Add one under Institutions first.
@@ -107,6 +122,24 @@ export function ApplicationsPanel({
                   </option>
                 ))}
               </select>
+              {docOfficers.length > 0 ? (
+                <select
+                  value={assignedDocOfficerId}
+                  onChange={(e) => setAssignedDocOfficerId(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Assign to Documentation Officer (optional)…</option>
+                  {docOfficers.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  No Documentation Officers registered yet — everyone with that role will be notified once you add one.
+                </p>
+              )}
               {error && <p className="text-xs text-red-600">{error}</p>}
               <div className="flex items-center gap-2">
                 <button
@@ -138,7 +171,12 @@ export function ApplicationsPanel({
             <li key={a.id} className="border-t border-slate-100 pt-3 first:border-0 first:pt-0">
               <p className="font-medium">{a.destination.university} — {a.destination.course}</p>
               <p className="text-slate-500">{a.destination.country} · {a.destination.intake}</p>
-              <p className="mt-1 inline-block rounded bg-slate-100 px-2 py-0.5 text-xs">{a.status.replace(/_/g, " ")}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="inline-block rounded bg-slate-100 px-2 py-0.5 text-xs">{a.status.replace(/_/g, " ")}</span>
+                <span className="inline-block rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
+                  {a.assignedDocOfficer ? `Assigned: ${a.assignedDocOfficer.name}` : "Unassigned"}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

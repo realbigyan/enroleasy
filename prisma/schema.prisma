@@ -112,6 +112,7 @@ model User {
   auditLogs            AuditLog[]    @relation("AuditActor")
   passwordResetTokens  PasswordResetToken[]
   notifications        Notification[]
+  assignedApplications Application[] @relation("AssignedDocOfficer")
 
   @@unique([organizationId, email])
   @@map("users")
@@ -291,10 +292,16 @@ model Application {
   currentStage          ApplicationStage?
   currentStageOther     String?   // free-text label when currentStage = OTHER
   currentStageUpdatedAt DateTime?
+  // Chosen by the counsellor (or whoever creates the application) from the
+  // org's active Documentation Officers. Nullable: assignment is optional,
+  // e.g. an org with no Documentation Officers registered yet.
+  assignedDocOfficer   User?     @relation("AssignedDocOfficer", fields: [assignedDocOfficerId], references: [id])
+  assignedDocOfficerId String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   @@index([organizationId, status])
+  @@index([organizationId, assignedDocOfficerId])
   @@map("applications")
 }
 

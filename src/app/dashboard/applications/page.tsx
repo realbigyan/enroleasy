@@ -13,6 +13,7 @@ type Application = {
   currentStage: ApplicationStageValue | null;
   currentStageOther: string | null;
   currentStageUpdatedAt: string | null;
+  assignedDocOfficer: { id: string; name: string } | null;
 };
 
 type StageLog = {
@@ -141,6 +142,7 @@ export default function ApplicationsPage() {
                 <th className="px-4 py-3">Destination</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Stage</th>
+                <th className="px-4 py-3">Assigned to</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -166,6 +168,9 @@ export default function ApplicationsPage() {
                       </select>
                     </td>
                     <td className="px-4 py-3">{stageBadge(a)}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {a.assignedDocOfficer ? a.assignedDocOfficer.name : <span className="text-slate-400">Unassigned</span>}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {canManageStage && (
@@ -187,7 +192,7 @@ export default function ApplicationsPage() {
                   </tr>
                   {editingId === a.id && (
                     <tr className="border-b border-slate-100 bg-indigo-50/40">
-                      <td colSpan={5} className="px-4 py-3">
+                      <td colSpan={6} className="px-4 py-3">
                         <div className="grid gap-2 sm:grid-cols-4">
                           <select
                             value={stageForm.stage}
@@ -236,7 +241,7 @@ export default function ApplicationsPage() {
                   )}
                   {historyId === a.id && (
                     <tr className="border-b border-slate-100 bg-slate-50">
-                      <td colSpan={5} className="px-4 py-3">
+                      <td colSpan={6} className="px-4 py-3">
                         {loadingHistory ? (
                           <p className="text-xs text-slate-500">Loading history…</p>
                         ) : historyLogs.length === 0 ? (
