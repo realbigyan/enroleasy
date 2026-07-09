@@ -91,3 +91,47 @@ export async function notifyUsers(params: {
     })
   );
 }
+
+// Platform-level notification: every isSuperAdmin user across every org gets
+// pinged (e.g. a new consultancy signed up and is waiting for trial
+// approval). Each notification is scoped to the recipient's own
+// organizationId so it shows up in their normal notification feed, even
+// though it's about a different org entirely.
+export async function notifySuperAdmins(params: {
+  type: string;
+  title: string;
+  body?: string;
+  link?: string;
+}) {
+  const { type, title, body, link } = params;
+
+  const admins = await prisma.user.findMany({
+    where: { isSuperAdmin: true, isActive: true },
+    select: { id: true, email: true, name: true, organizationId: true },
+  });
+
+  if (admins.length === 0) return;
+
+  type Admin = { id: string; email: string; name: string; organizationId: string };
+
+  await prisma.notification.createMany({
+    data: admins.map((a: Admin) => ({
+      organizationId: a.organizationId,
+      recipientId: a.id,
+      type,
+      title,
+      body,
+      link,
+    })),
+  });
+
+  await Promise.all(
+    admins.map(async (a: Admin) => {
+      try {
+        await sendNotificationEmail(a.email, title, body ?? title, link);
+      } catch (err) {
+        console.error(`Failed to email superadmin notification to ${a.email}:`, err);
+      }
+    })
+  );
+}

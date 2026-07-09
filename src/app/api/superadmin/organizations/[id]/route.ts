@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, handleApiError, ApiError } from "@/lib/api-guard";
 
 const SUBSCRIPTION_PLANS = ["STARTER", "GROWTH", "SCALE"] as const;
-const SUBSCRIPTION_STATUSES = ["TRIALING", "ACTIVE", "PAST_DUE", "CANCELED"] as const;
+const SUBSCRIPTION_STATUSES = ["PENDING_APPROVAL", "TRIALING", "ACTIVE", "PAST_DUE", "CANCELED"] as const;
 
 const updateSchema = z.object({
   plan: z.enum(SUBSCRIPTION_PLANS).optional(),

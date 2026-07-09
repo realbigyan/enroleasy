@@ -37,7 +37,7 @@ export default function RegisterPage() {
           <GraduationCap className="h-6 w-6 text-indigo-600" /> EnrolEasy
         </Link>
         <h1 className="text-xl font-semibold">Create your consultancy workspace</h1>
-        <p className="mt-1 text-sm text-slate-500">Start your 14-day free trial. No card needed.</p>
+        <p className="mt-1 text-sm text-slate-500">Your workspace is created instantly — trial access is approved by our team, usually within a day.</p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>

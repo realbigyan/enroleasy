@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const PLANS = ["STARTER", "GROWTH", "SCALE"] as const;
-const STATUSES = ["TRIALING", "ACTIVE", "PAST_DUE", "CANCELED"] as const;
+const STATUSES = ["PENDING_APPROVAL", "TRIALING", "ACTIVE", "PAST_DUE", "CANCELED"] as const;
 
 type Plan = (typeof PLANS)[number];
 type Status = (typeof STATUSES)[number];
@@ -48,7 +48,7 @@ export function SuperadminOrganizationsClient() {
           o.id,
           {
             plan: o.subscription?.plan ?? "STARTER",
-            status: o.subscription?.status ?? "TRIALING",
+            status: o.subscription?.status ?? "PENDING_APPROVAL",
             seats: o.subscription?.seats ?? 5,
             trialEndsAt: toDateInputValue(o.subscription?.trialEndsAt ?? null),
           },
@@ -65,6 +65,28 @@ export function SuperadminOrganizationsClient() {
 
   function updateEdit(id: string, patch: Partial<EditState>) {
     setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }
+
+  async function approveTrial(id: string) {
+    setSavingId(id);
+    setMessage(null);
+    try {
+      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      const res = await fetch(`/api/superadmin/organizations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "TRIALING", trialEndsAt }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage({ id, text: data.error ?? "Could not approve trial", ok: false });
+        return;
+      }
+      setMessage({ id, text: "Trial approved — 14 days starting now.", ok: true });
+      load();
+    } finally {
+      setSavingId(null);
+    }
   }
 
   async function save(id: string) {
@@ -112,7 +134,14 @@ export function SuperadminOrganizationsClient() {
               <div key={org.id} className="rounded-xl border border-slate-200 bg-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold">{org.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{org.name}</p>
+                      {org.subscription?.status === "PENDING_APPROVAL" && (
+                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          Awaiting approval
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-500">
                       {org.slug} · {org.country ?? "No country set"} · joined{" "}
                       {new Date(org.createdAt).toLocaleDateString()}
@@ -177,6 +206,15 @@ export function SuperadminOrganizationsClient() {
                   >
                     {savingId === org.id ? "Saving…" : "Save changes"}
                   </button>
+                  {org.subscription?.status === "PENDING_APPROVAL" && (
+                    <button
+                      onClick={() => approveTrial(org.id)}
+                      disabled={savingId === org.id}
+                      className="rounded-md bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      Approve 14-day trial
+                    </button>
+                  )}
                   {message?.id === org.id && (
                     <span className={`text-sm ${message.ok ? "text-green-600" : "text-red-600"}`}>
                       {message.text}

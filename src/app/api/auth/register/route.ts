@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-guard";
+import { notifySuperAdmins } from "@/lib/notify";
 
 const schema = z.object({
   organizationName: z.string().min(2),
@@ -37,8 +38,7 @@ export async function POST(req: NextRequest) {
         subscription: {
           create: {
             plan: "STARTER",
-            status: "TRIALING",
-            trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+            status: "PENDING_APPROVAL",
           },
         },
         users: {
@@ -61,6 +61,13 @@ export async function POST(req: NextRequest) {
       name: owner.name,
       email: owner.email,
     });
+
+    notifySuperAdmins({
+      type: "org_pending_approval",
+      title: "New consultancy awaiting trial approval",
+      body: `${org.name} just signed up (owner: ${owner.name}). Approve their trial in Superadmin.`,
+      link: "/dashboard/superadmin",
+    }).catch((err) => console.error("Failed to notify superadmins of new signup:", err));
 
     return NextResponse.json({ organizationId: org.id, slug: org.slug });
   } catch (err) {
