@@ -6,9 +6,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "EnrolEasy — Consultancy CRM + Test Prep",
+  title: "EnrolEasy — CRM, Test Prep & Accounting for Consultancies",
   description:
-    "The all-in-one B2B platform for study-abroad consultancies: CRM pipeline, application tracking, and IELTS/PTE/Duolingo practice tools for your students.",
+    "The all-in-one platform for study-abroad consultancies: CRM pipeline, application tracking, IELTS/PTE/Duolingo test prep, and a full Nepal-compliant accounting & payroll system.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
