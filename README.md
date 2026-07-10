@@ -32,13 +32,16 @@ src/
     dashboard/
       layout.tsx         Auth-gated shell + sidebar nav
       page.tsx           Overview / stats
-      leads/             Lead pipeline (kanban)
+      leads/             Lead pipeline (kanban) + CSV import
       students/          Student list + profile
       applications/      Application tracker
       tasks/             Follow-up tasks
+      integrations/      Lead-intake webhook, Meta connect, CSV import notes
     api/
       auth/              register, login, logout, me
       leads/ students/ applications/ tasks/ notes/ destinations/   CRM CRUD
+      integrations/      Webhook token + native Meta OAuth/connect flow
+      webhooks/meta/     Meta Lead Ads webhook receiver
   lib/
     prisma.ts           Prisma client singleton
     auth.ts             Password hashing, JWT sessions, cookie helpers
@@ -102,4 +105,17 @@ src/
 - Stripe billing wired to the `Subscription` model (checkout, webhooks, seat limits).
 - Org-level settings page (invite counselors, manage seats, branding).
 - Email notifications for task due-dates and application status changes.
-- Bulk lead import (CSV) and partner-agent referral tracking.
+- Partner-agent referral tracking dashboards.
+
+## Lead integrations
+
+Three ways to get leads into EnrolEasy, all documented with in-app setup notes on the **Integrations** page:
+
+1. **Generic webhook** — works today, no approval needed. Point Zapier's or Make.com's built-in
+   Facebook Lead Ads trigger at your org's secret webhook URL.
+2. **Native Meta integration** — connect a Facebook Page directly via OAuth. Requires a Meta
+   Developer App (`META_APP_ID`/`META_APP_SECRET`/`META_WEBHOOK_VERIFY_TOKEN`) and Meta's
+   App Review approval for `leads_retrieval` before it's live; the Integrations page shows
+   a clear "not yet available" state until then.
+3. **CSV import** — always-available manual fallback with column mapping and duplicate detection,
+   built into the Leads page.

@@ -52,6 +52,10 @@ model Organization {
   // Expense records too (1.5% w/ VAT invoice vs 15% on a PAN-only bill).
   taxRegistrationType TaxRegistrationType?
   panVatNumber        String?
+  // Secret token for the generic lead-intake webhook (Zapier/Make etc.) —
+  // distinct from `slug`, which is public/guessable. Generated on first use
+  // via the Integrations settings page, rotatable at any time.
+  leadWebhookToken String? @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -71,6 +75,7 @@ model Organization {
   auditLogs     AuditLog[]
   institutions  Institution[]
   notifications Notification[]
+  metaIntegration MetaIntegration?
 
   // Accounting domain
   accounts      Account[]
@@ -202,6 +207,8 @@ enum LeadSource {
   SOCIAL_MEDIA
   EVENT
   PARTNER_AGENT
+  META_ADS   // via the native Meta Lead Ads integration or the generic webhook
+  CSV_IMPORT // bulk-uploaded (e.g. exported from Meta Ads Manager)
   OTHER
 }
 
@@ -230,9 +237,44 @@ model Lead {
   archivedAt          DateTime?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
+  // External reference used to de-duplicate leads created by an automated
+  // intake path (the generic webhook, the native Meta integration, or a
+  // repeated CSV upload) — e.g. Meta's leadgen_id, or a Zapier-supplied id.
+  // Null for leads entered manually or through the public booking form.
+  externalId          String?
 
   @@index([organizationId, stage])
+  @@unique([organizationId, externalId])
   @@map("leads")
+}
+
+// A consultancy's connected Facebook Page for the native Meta Lead Ads
+// integration (option 2 of the lead-intake feature). One per organization.
+// `pageAccessToken` is a long-lived Page token from the OAuth connect flow —
+// production hardening note: this should be encrypted at rest (e.g. via a
+// KMS-backed field) rather than stored as plain text; flagged here rather
+// than silently shipped as-is.
+enum MetaIntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR // token expired/revoked, or Graph API calls started failing
+}
+
+model MetaIntegration {
+  id               String                @id @default(cuid())
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId   String                @unique
+  pageId           String
+  pageName         String
+  pageAccessToken  String
+  subscribedFormIds String[]             @default([]) // empty = sync leads from every form on the page
+  status           MetaIntegrationStatus @default(CONNECTED)
+  connectedByUserId String?
+  lastLeadAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@map("meta_integrations")
 }
 
 model Destination {

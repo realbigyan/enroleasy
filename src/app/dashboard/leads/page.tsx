@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
+import { LeadImportModal } from "@/components/LeadImportModal";
 
 const STAGES = [
   "NEW", "CONTACTED", "TRIAL_BOOKED", "TRIAL_DONE", "QUALIFIED", "COUNSELING",
@@ -21,6 +22,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [form, setForm] = useState({ fullName: "", email: "", phone: "", interestedCountry: "" });
 
   async function load() {
@@ -73,6 +75,12 @@ export default function LeadsPage() {
             Export CSV
           </a>
           <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50"
+          >
+            <Upload className="h-4 w-4" /> Import CSV
+          </button>
+          <button
             onClick={() => setShowForm((v) => !v)}
             className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
@@ -80,6 +88,10 @@ export default function LeadsPage() {
           </button>
         </div>
       </div>
+
+      {showImport && (
+        <LeadImportModal onClose={() => setShowImport(false)} onImported={load} />
+      )}
 
       {showForm && (
         <form onSubmit={createLead} className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-4">
