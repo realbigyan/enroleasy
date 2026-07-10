@@ -48,6 +48,11 @@ model Organization {
   slug          String   @unique
   logoUrl       String?
   country       String?
+  // Accounting: how this org bills for tax purposes. VAT_REGISTERED charges
+  // 13% VAT on invoices; PAN_ONLY does not. Drives TDS rate selection on
+  // Expense records too (1.5% w/ VAT invoice vs 15% on a PAN-only bill).
+  taxRegistrationType TaxRegistrationType?
+  panVatNumber        String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -68,6 +73,15 @@ model Organization {
   auditLogs     AuditLog[]
   institutions  Institution[]
   notifications Notification[]
+
+  // Accounting domain
+  accounts      Account[]
+  journalEntries JournalEntry[]
+  vendors        Vendor[]
+  expenses       Expense[]
+  bankAccounts   BankAccount[]
+  fixedAssets    FixedAsset[]
+  employees      Employee[]
 
   @@map("organizations")
 }
@@ -114,6 +128,7 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   notifications        Notification[]
   assignedApplications Application[] @relation("AssignedDocOfficer")
+  employeeProfiles     Employee[]
 
   @@unique([organizationId, email])
   @@map("users")
@@ -851,4 +866,269 @@ model Notification {
 
   @@index([organizationId, recipientId, read])
   @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// ACCOUNTING DOMAIN — Nepal-compliant double-entry books
+// Fiscal periods use the Nepali (Bikram Sambat) fiscal year, Shrawan 1 to
+// Ashadh-end, labelled e.g. "2082/83". See src/lib/accounting/fiscal-year.ts.
+// ─────────────────────────────────────────────
+
+enum TaxRegistrationType {
+  VAT_REGISTERED
+  PAN_ONLY
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum JournalSourceType {
+  MANUAL
+  INVOICE
+  EXPENSE
+  PAYROLL
+  DEPRECIATION
+  BANK
+  OPENING_BALANCE
+}
+
+enum BankAccountKind {
+  BANK
+  CASH
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DIMINISHING_BALANCE
+}
+
+// Chart of accounts. Every org gets a default Nepal-oriented set seeded on
+// first use (see src/lib/accounting/seed-chart-of-accounts.ts), fully
+// editable/extendable afterwards. Hierarchical via parent for subtotals.
+model Account {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  code           String       // e.g. "1000", "4100" — sortable, editable
+  name           String
+  type           AccountType
+  parent         Account?     @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  parentId       String?
+  children       Account[]    @relation("AccountHierarchy")
+  isSystem       Boolean      @default(false) // seeded default account; UI discourages delete, doesn't block it
+  isActive       Boolean      @default(true)
+  description    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  journalLines   JournalLine[]
+  expenses       Expense[]    @relation("ExpenseCategoryAccount")
+  fixedAssets    FixedAsset[] @relation("FixedAssetAccount")
+
+  @@unique([organizationId, code])
+  @@index([organizationId, type])
+  @@map("accounts")
+}
+
+// A balanced double-entry transaction. Sum(debit) must equal sum(credit)
+// across its lines — enforced in the API layer, not the DB.
+model JournalEntry {
+  id             String            @id @default(cuid())
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  date           DateTime
+  fiscalYear     String            // Nepali BS fiscal year label, e.g. "2082/83"
+  reference      String?           // e.g. invoice #, cheque #
+  description    String
+  sourceType     JournalSourceType @default(MANUAL)
+  sourceId       String?           // id of the Invoice/Expense/Payslip/etc. that generated this, if any
+  createdById    String
+  createdAt      DateTime          @default(now())
+
+  lines          JournalLine[]
+
+  @@index([organizationId, fiscalYear])
+  @@index([organizationId, date])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id             String       @id @default(cuid())
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  journalEntryId String
+  account        Account      @relation(fields: [accountId], references: [id])
+  accountId      String
+  debit          Float        @default(0)
+  credit         Float        @default(0)
+  memo           String?
+
+  @@index([accountId])
+  @@map("journal_lines")
+}
+
+// Vendors / suppliers the org pays — needed to issue TDS withholding certificates.
+model Vendor {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  panNumber      String?
+  address        String?
+  email          String?
+  phone          String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  expenses       Expense[]
+
+  @@index([organizationId])
+  @@map("vendors")
+}
+
+// A business expense/purchase. Auto-posts a journal entry (debit expense
+// account, credit cash/bank) and computes TDS to withhold per the Income
+// Tax Act 2058 secs. 87-92 rates (e.g. 1.5% on a VAT-invoiced service,
+// 15% on a PAN-only service bill, ~10% on rent).
+model Expense {
+  id              String           @id @default(cuid())
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  vendor          Vendor?          @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  vendorId        String?
+  account         Account          @relation("ExpenseCategoryAccount", fields: [accountId], references: [id])
+  accountId       String
+  date            DateTime
+  fiscalYear      String
+  description     String
+  amount          Float            // gross amount before VAT
+  vatAmount       Float            @default(0)
+  hasVatInvoice   Boolean          @default(false) // affects TDS rate selection
+  tdsRate         Float            @default(0)     // percentage, e.g. 1.5, 15, 10
+  tdsAmount       Float            @default(0)
+  bankAccount     BankAccount?     @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  bankAccountId   String?
+  attachmentUrl   String?
+  createdAt       DateTime         @default(now())
+
+  @@index([organizationId, fiscalYear])
+  @@map("expenses")
+}
+
+// Bank & cash accounts, plus their transaction ledger for reconciliation.
+model BankAccount {
+  id             String          @id @default(cuid())
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String          // e.g. "NIC Asia - Operating", "Petty Cash"
+  kind           BankAccountKind @default(BANK)
+  accountNumber  String?
+  bankName       String?
+  currency       String          @default("NPR")
+  openingBalance Float           @default(0)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+
+  transactions   BankTransaction[]
+  expenses       Expense[]
+
+  @@index([organizationId])
+  @@map("bank_accounts")
+}
+
+model BankTransaction {
+  id             String      @id @default(cuid())
+  bankAccount    BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  bankAccountId  String
+  date           DateTime
+  description    String
+  amount         Float       // positive = deposit, negative = withdrawal
+  reconciled     Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+
+  @@index([bankAccountId])
+  @@map("bank_transactions")
+}
+
+// Fixed assets + straight-line/diminishing-balance depreciation schedule,
+// one DepreciationEntry generated per Nepali fiscal year.
+model FixedAsset {
+  id                  String              @id @default(cuid())
+  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId      String
+  account             Account             @relation("FixedAssetAccount", fields: [accountId], references: [id])
+  accountId           String
+  name                String
+  purchaseDate        DateTime
+  cost                Float
+  usefulLifeYears     Int
+  salvageValue        Float               @default(0)
+  method              DepreciationMethod  @default(STRAIGHT_LINE)
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+
+  depreciationEntries DepreciationEntry[]
+
+  @@index([organizationId])
+  @@map("fixed_assets")
+}
+
+model DepreciationEntry {
+  id           String     @id @default(cuid())
+  fixedAsset   FixedAsset @relation(fields: [fixedAssetId], references: [id], onDelete: Cascade)
+  fixedAssetId String
+  fiscalYear   String
+  amount       Float
+  createdAt    DateTime   @default(now())
+
+  @@unique([fixedAssetId, fiscalYear])
+  @@map("depreciation_entries")
+}
+
+// Staff payroll — separate from the CRM `User` staff model since not every
+// employee needs platform login access, and salary data is more sensitive.
+model Employee {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId         String?      // optional link to their login account
+  name           String
+  panNumber      String?
+  designation    String?
+  basicSalary    Float
+  allowances     Float        @default(0)
+  isActive       Boolean      @default(true)
+  joinedAt       DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+
+  payslips       Payslip[]
+
+  @@index([organizationId])
+  @@map("employees")
+}
+
+model Payslip {
+  id             String    @id @default(cuid())
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId     String
+  organizationId String
+  month          Int       // 1-12, Nepali month (1 = Baishakh)
+  fiscalYear     String
+  grossPay       Float
+  ssfEmployee    Float     @default(0) // 11% employee SSF contribution, if enrolled
+  ssfEmployer    Float     @default(0) // 20% employer SSF contribution, if enrolled
+  taxableIncome  Float
+  tdsAmount      Float     @default(0)
+  netPay         Float
+  paidAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([employeeId, fiscalYear, month])
+  @@index([organizationId, fiscalYear])
+  @@map("payslips")
 }
