@@ -934,6 +934,7 @@ model Account {
   fixedAssetPayments    FixedAsset[]      @relation("FixedAssetPaymentAccount")
   bankAccount           BankAccount?
   bankTransactionsAsCounter BankTransaction[]
+  payslipPayments       Payslip[]         @relation("PayslipPaymentAccount")
 
   @@unique([organizationId, code])
   @@index([organizationId, type])
@@ -1126,6 +1127,7 @@ model Employee {
   designation    String?
   basicSalary    Float
   allowances     Float        @default(0)
+  ssfEnrolled    Boolean      @default(false) // Social Security Fund registered employee
   isActive       Boolean      @default(true)
   joinedAt       DateTime     @default(now())
   createdAt      DateTime     @default(now())
@@ -1141,6 +1143,8 @@ model Payslip {
   employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   employeeId     String
   organizationId String
+  paymentAccount   Account   @relation("PayslipPaymentAccount", fields: [paymentAccountId], references: [id])
+  paymentAccountId String
   month          Int       // 1-12, Nepali month (1 = Baishakh)
   fiscalYear     String
   grossPay       Float
