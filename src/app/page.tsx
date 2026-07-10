@@ -84,47 +84,36 @@ const security = [
   { icon: CheckCircle2, title: "Secure account recovery", body: "Built-in password reset and email-change flows, with confirmation steps at every point." },
 ];
 
+const planFeatures = [
+  "Full CRM: leads, students, applications & visa tracking",
+  "Full Nepal-compliant accounting & payroll module",
+  "Role-based staff accounts across your whole team",
+  "Multi-branch, multi-tenant workspace",
+  "Dashboard analytics & audit log",
+  "Priority email support",
+];
+
 const pricing = [
   {
-    name: "Starter",
-    price: "$49",
-    seats: "Up to 5 seats",
-    cta: "Start free trial",
+    term: "Monthly",
+    price: "NRs 7,500",
+    billedAs: "Billed every month",
+    savings: null,
     highlight: false,
-    features: [
-      "Full CRM: leads, students, applications",
-      "Full accounting & payroll module",
-      "Role-based staff accounts",
-      "Email support",
-    ],
   },
   {
-    name: "Growth",
-    price: "$129",
-    seats: "Up to 20 seats",
-    cta: "Start free trial",
+    term: "6 Months",
+    price: "NRs 38,250",
+    billedAs: "NRs 6,375/month, billed every 6 months",
+    savings: "Save 15%",
+    highlight: false,
+  },
+  {
+    term: "1 Year",
+    price: "NRs 67,500",
+    billedAs: "NRs 5,625/month, billed annually",
+    savings: "Save 25%",
     highlight: true,
-    features: [
-      "Everything in Starter",
-      "Priority support",
-      "Multi-branch team structures",
-      "Advanced dashboard analytics",
-      "Audit log & compliance tools",
-    ],
-  },
-  {
-    name: "Scale",
-    price: "Custom",
-    seats: "Unlimited seats",
-    cta: "Contact sales",
-    highlight: false,
-    features: [
-      "Everything in Growth",
-      "Unlimited staff accounts",
-      "Dedicated onboarding",
-      "Custom contract & billing terms",
-      "Priority feature requests",
-    ],
   },
 ];
 
@@ -138,8 +127,8 @@ const faqs = [
     a: "Yes — every plan starts with a free 14-day trial, no credit card required.",
   },
   {
-    q: "Does every plan include the accounting module?",
-    a: "Yes. Every plan — Starter, Growth, and Scale — includes the full platform: CRM and accounting. Plans differ by team size and support level, not by feature access.",
+    q: "Does every billing option include the accounting module?",
+    a: "Yes. There's one plan with the full platform — CRM and accounting — for every organization. Monthly, 6-month, and annual billing only change how often you're charged and how much you save; every feature is always included.",
   },
   {
     q: "Can my whole team use it, or is this just for one person?",
@@ -331,36 +320,45 @@ export default function LandingPage() {
       <section id="pricing" className="py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight">Simple, per-seat pricing</h2>
+            <h2 className="text-3xl font-bold tracking-tight">One plan. Everything included.</h2>
             <p className="mt-4 text-slate-600">
-              Every plan includes the full platform — CRM and accounting. Plans differ by
-              team size and support level, not by feature access.
+              Every EnrolEasy subscription includes the full platform — CRM and accounting.
+              Choose how often you&apos;d like to be billed, and save more the longer you commit.
             </p>
           </div>
-          <div className="mt-14 grid gap-6 sm:grid-cols-3">
+
+          <div className="mx-auto mt-14 max-w-3xl rounded-2xl border border-slate-200 bg-white p-8">
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {planFeatures.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-600" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mx-auto mt-8 grid max-w-4xl gap-6 sm:grid-cols-3">
             {pricing.map((p) => (
               <div
-                key={p.name}
+                key={p.term}
                 className={`flex flex-col rounded-2xl border p-8 ${
                   p.highlight ? "border-indigo-600 bg-indigo-50/50 shadow-sm" : "border-slate-200 bg-white"
                 }`}
               >
                 {p.highlight && (
                   <span className="mb-3 w-fit rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white">
-                    Most popular
+                    Best value
                   </span>
                 )}
-                <h3 className="font-semibold">{p.name}</h3>
+                <h3 className="font-semibold">{p.term}</h3>
                 <p className="mt-2 text-3xl font-bold">{p.price}</p>
-                <p className="mt-1 text-sm text-slate-500">{p.seats} / month</p>
-                <ul className="mt-6 flex-1 space-y-3">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-600" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+                <p className="mt-1 text-sm text-slate-500">{p.billedAs}</p>
+                {p.savings && (
+                  <span className="mt-3 w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                    {p.savings}
+                  </span>
+                )}
                 <Link
                   href="/register"
                   className={`mt-8 rounded-md px-4 py-2 text-center text-sm font-medium ${
@@ -369,7 +367,7 @@ export default function LandingPage() {
                       : "border border-slate-300 bg-white hover:bg-slate-50"
                   }`}
                 >
-                  {p.cta}
+                  Start free trial
                 </Link>
               </div>
             ))}
