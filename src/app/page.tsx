@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   GraduationCap, Users, ClipboardList, BarChart3, ShieldCheck,
-  Calculator, Handshake, Landmark, ScrollText,
+  Calculator, Handshake, Landmark, ScrollText, Calendar,
   Lock, Building2, CheckCircle2, ArrowRight, FolderOpen, SearchCheck,
 } from "lucide-react";
 
@@ -51,7 +51,8 @@ const features = [
   { icon: Handshake, title: "Partner & referral network", body: "Track referral partners and agents, and bill commissions directly from the same platform." },
   { icon: Landmark, title: "Billing & invoicing", body: "Issue branded invoices and receipts to students or partners — automatically reflected in your accounting ledger." },
   { icon: Calculator, title: "Full accounting & payroll", body: "Chart of accounts, journal ledger, TDS/VAT, payroll, fixed assets, and financial reports — built for Nepal from the ground up." },
-  { icon: ShieldCheck, title: "Team & role-based access", body: "Nine distinct staff roles — from Owner to Examiner — so every team member sees exactly what their job requires." },
+  { icon: Calendar, title: "Exam booking tracker", body: "Log when a student is booked for a real IELTS, PTE, or Duolingo exam, and record their result once it's in." },
+  { icon: ShieldCheck, title: "Team & role-based access", body: "Nine distinct staff roles — from Owner to Documentation Officer — so every team member sees exactly what their job requires." },
   { icon: ScrollText, title: "Audit log", body: "A full history of role and permission changes across your organization, for accountability at any team size." },
   { icon: Building2, title: "Multi-branch, multi-tenant", body: "Every consultancy gets its own fully isolated workspace — invite staff, assign roles, keep data separated by organization." },
   { icon: BarChart3, title: "Dashboard analytics", body: "Lead funnel, conversion rates, task load, and revenue collected — a real-time view of your whole operation." },
@@ -246,7 +247,7 @@ export default function LandingPage() {
             EnrolEasy connects both, so data entered once shows up everywhere it matters.
           </p>
         </div>
-        <div className="mt-14 grid gap-8 lg:grid-cols-3">
+        <div className="mx-auto mt-14 grid max-w-4xl gap-8 sm:grid-cols-2">
           {pillars.map((p) => (
             <div key={p.name} className="rounded-2xl border border-slate-200 bg-white p-8">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50">
@@ -450,6 +451,7 @@ export default function LandingPage() {
               <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li>Study-abroad consultancies</li>
                 <li>Multi-branch education agencies</li>
+                <li>Teams who want CRM + accounting in one tool</li>
               </ul>
             </div>
           </div>
