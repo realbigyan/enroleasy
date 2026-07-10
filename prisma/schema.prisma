@@ -764,12 +764,22 @@ enum StudentLanguageStatus {
   NONE
 }
 
+enum InstitutionType {
+  PUBLIC_UNIVERSITY
+  PRIVATE_UNIVERSITY
+  VET_COLLEGE
+  PRIVATE_COLLEGE
+  POLYTECHNIC
+}
+
 model Institution {
   id             String        @id @default(cuid())
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId String?       // null = shared global catalog
   name           String
   country        String
+  locations      String[]      @default([]) // campuses/cities within the country
+  type           InstitutionType?
   website        String?
   logoUrl        String?
   introduction   String?       // "university intro" description
@@ -778,9 +788,26 @@ model Institution {
   updatedAt      DateTime      @updatedAt
 
   courses        Course[]
+  rankings       InstitutionRanking[]
 
   @@index([organizationId, country])
   @@map("institutions")
+}
+
+// A flexible list of rankings so an institution can carry several at once
+// (e.g. "Global" via QS, "Country" via a national ranking body, plus any
+// other scope a counsellor wants to record) rather than one fixed rank.
+model InstitutionRanking {
+  id            String      @id @default(cuid())
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institutionId String
+  scope         String      // free text, e.g. "Global", "Country", "QS Asia"
+  rank          Int
+  source        String      // e.g. "QS World University Rankings 2026"
+  createdAt     DateTime    @default(now())
+
+  @@index([institutionId])
+  @@map("institution_rankings")
 }
 
 model Course {
