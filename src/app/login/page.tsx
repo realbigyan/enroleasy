@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function LoginPage() {
     <div className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8">
         <Link href="/" className="mb-6 flex items-center gap-2 font-semibold">
-          <GraduationCap className="h-6 w-6 text-indigo-600" /> EnrolEasy
+          <LogoMark className="h-6 w-6" /> EnrolEasy
         </Link>
         <h1 className="text-xl font-semibold">Log in to your workspace</h1>
 

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  GraduationCap, LayoutDashboard, Users, UserSquare2, ClipboardList,
+  LayoutDashboard, Users, UserSquare2, ClipboardList,
   CheckSquare, LogOut, Handshake, Receipt, ShieldCheck, ScrollText,
   Landmark, SearchCheck, Settings, Crown, Calculator, Plug,
 } from "lucide-react";
 import clsx from "clsx";
 import { NotificationBell } from "./NotificationBell";
+import { LogoMark } from "./Logo";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, roles: null },
@@ -52,7 +53,7 @@ export function DashboardNav({
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white print:hidden">
       <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-6 py-5">
         <span className="flex items-center gap-2 font-semibold">
-          <GraduationCap className="h-6 w-6 text-indigo-600" /> EnrolEasy
+          <LogoMark className="h-6 w-6" /> EnrolEasy
         </span>
         <NotificationBell />
       </div>

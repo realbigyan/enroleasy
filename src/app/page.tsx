@@ -1,9 +1,10 @@
 import Link from "next/link";
 import {
-  GraduationCap, Users, ClipboardList, BarChart3, ShieldCheck,
+  Users, ClipboardList, BarChart3, ShieldCheck,
   Calculator, Handshake, Landmark, ScrollText, Calendar,
   Lock, Building2, CheckCircle2, ArrowRight, FolderOpen, SearchCheck,
 } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 
 // ─────────────────────────────────────────────
 // Content data
@@ -160,7 +161,7 @@ export default function LandingPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2 font-semibold text-lg">
-            <GraduationCap className="h-6 w-6 text-indigo-600" />
+            <LogoMark className="h-6 w-6" />
             EnrolEasy
           </div>
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
@@ -420,7 +421,7 @@ export default function LandingPage() {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="flex items-center gap-2 font-semibold">
-                <GraduationCap className="h-5 w-5 text-indigo-600" />
+                <LogoMark className="h-5 w-5" />
                 EnrolEasy
               </div>
               <p className="mt-3 text-sm text-slate-500">
