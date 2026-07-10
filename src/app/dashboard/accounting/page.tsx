@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, BookOpen, Receipt, Landmark } from "lucide-react";
+import { Plus, BookOpen, Receipt, Landmark, Boxes } from "lucide-react";
 
 type Account = {
   id: string;
@@ -102,6 +102,12 @@ export default function AccountingPage() {
             className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
           >
             <Receipt className="h-4 w-4" /> Expenses & Vendors
+          </Link>
+          <Link
+            href="/dashboard/accounting/fixed-assets"
+            className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+          >
+            <Boxes className="h-4 w-4" /> Fixed Assets
           </Link>
           <Link
             href="/dashboard/accounting/ledger"

@@ -895,6 +895,7 @@ enum JournalSourceType {
   DEPRECIATION
   BANK
   OPENING_BALANCE
+  FIXED_ASSET
 }
 
 enum BankAccountKind {
@@ -930,6 +931,7 @@ model Account {
   expenses              Expense[]         @relation("ExpenseCategoryAccount")
   expensePayments       Expense[]         @relation("ExpensePaymentAccount")
   fixedAssets           FixedAsset[]      @relation("FixedAssetAccount")
+  fixedAssetPayments    FixedAsset[]      @relation("FixedAssetPaymentAccount")
   bankAccount           BankAccount?
   bankTransactionsAsCounter BankTransaction[]
 
@@ -1080,6 +1082,10 @@ model FixedAsset {
   organizationId      String
   account             Account             @relation("FixedAssetAccount", fields: [accountId], references: [id])
   accountId           String
+  // GL account credited for the purchase (cash/bank/AP), same pattern as
+  // Expense.paymentAccountId.
+  paymentAccount      Account             @relation("FixedAssetPaymentAccount", fields: [paymentAccountId], references: [id])
+  paymentAccountId    String
   name                String
   purchaseDate        DateTime
   cost                Float
