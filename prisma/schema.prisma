@@ -926,9 +926,10 @@ model Account {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  journalLines   JournalLine[]
-  expenses       Expense[]    @relation("ExpenseCategoryAccount")
-  fixedAssets    FixedAsset[] @relation("FixedAssetAccount")
+  journalLines    JournalLine[]
+  expenses        Expense[]    @relation("ExpenseCategoryAccount")
+  expensePayments Expense[]    @relation("ExpensePaymentAccount")
+  fixedAssets     FixedAsset[] @relation("FixedAssetAccount")
 
   @@unique([organizationId, code])
   @@index([organizationId, type])
@@ -1002,6 +1003,11 @@ model Expense {
   vendorId        String?
   account         Account          @relation("ExpenseCategoryAccount", fields: [accountId], references: [id])
   accountId       String
+  // GL account credited for the payment (e.g. "Cash in Hand", "Bank Accounts",
+  // or "Accounts Payable" if paid on credit) — independent of the BankAccount
+  // reconciliation module below, which is a separate future addition.
+  paymentAccount   Account          @relation("ExpensePaymentAccount", fields: [paymentAccountId], references: [id])
+  paymentAccountId String
   date            DateTime
   fiscalYear      String
   description     String
