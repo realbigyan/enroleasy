@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, BookOpen, Receipt, Landmark, Boxes, Users, FileBarChart } from "lucide-react";
+import { Plus, BookOpen, Receipt, Landmark, Boxes, Users, FileBarChart, Settings } from "lucide-react";
 
 type Account = {
   id: string;
@@ -126,6 +126,12 @@ export default function AccountingPage() {
             className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
           >
             <FileBarChart className="h-4 w-4" /> Reports
+          </Link>
+          <Link
+            href="/dashboard/accounting/settings"
+            className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+          >
+            <Settings className="h-4 w-4" /> Settings
           </Link>
           <button
             onClick={() => setShowForm((v) => !v)}
