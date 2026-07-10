@@ -13,6 +13,10 @@ const schema = z.object({
   phone: z.string().optional().nullable(),
   interestedCountry: z.string().optional().nullable(),
   targetScore: z.string().optional().nullable(),
+  // Set by the reception/walk-in kiosk mode of this same form (?kiosk=1) so
+  // in-person signups are distinguishable from real website traffic in
+  // reporting. Anything else falls back to the WEBSITE default.
+  source: z.enum(["WEBSITE", "WALK_IN"]).optional(),
   // Honeypot field — real users never fill this in; bots often do.
   website: z.string().max(0).optional(),
 });
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
         phone: body.phone,
         interestedCountry: body.interestedCountry,
         targetScore: body.targetScore,
-        source: "WEBSITE",
+        source: body.source ?? "WEBSITE",
         stage: "NEW",
         lastActivityAt: new Date(),
       },

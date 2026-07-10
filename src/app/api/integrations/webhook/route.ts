@@ -17,17 +17,19 @@ export async function GET() {
     const session = await requireSession(["OWNER", "ADMIN"]);
     let org = await prisma.organization.findUnique({
       where: { id: session.organizationId },
-      select: { leadWebhookToken: true },
+      select: { leadWebhookToken: true, slug: true },
     });
     if (!org?.leadWebhookToken) {
       const token = generateToken();
       org = await prisma.organization.update({
         where: { id: session.organizationId },
         data: { leadWebhookToken: token },
-        select: { leadWebhookToken: true },
+        select: { leadWebhookToken: true, slug: true },
       });
     }
-    return NextResponse.json({ token: org.leadWebhookToken });
+    // slug is also returned here (not just the token) since the Integrations
+    // page needs it to build the reception/walk-in kiosk link + QR code.
+    return NextResponse.json({ token: org.leadWebhookToken, orgSlug: org.slug });
   } catch (err) {
     return handleApiError(err);
   }

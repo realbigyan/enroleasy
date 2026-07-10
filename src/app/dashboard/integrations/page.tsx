@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Webhook, Link2, Upload, Copy, Check, ExternalLink, AlertTriangle } from "lucide-react";
+import { Webhook, Link2, Upload, Copy, Check, ExternalLink, AlertTriangle, QrCode } from "lucide-react";
 import Link from "next/link";
 
 type MetaStatus = {
@@ -24,9 +24,13 @@ function IntegrationsPageInner() {
 
   // ── Option 1: generic webhook ────────────────────────────────────────
   const [webhookToken, setWebhookToken] = useState<string | null>(null);
+  const [orgSlug, setOrgSlug] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
   const [copied, setCopied] = useState(false);
   const [rotating, setRotating] = useState(false);
+
+  // ── Reception / walk-in kiosk form ───────────────────────────────────
+  const [receptionCopied, setReceptionCopied] = useState(false);
 
   // ── Option 2: native Meta integration ────────────────────────────────
   const [metaStatus, setMetaStatus] = useState<MetaStatus | null>(null);
@@ -36,7 +40,10 @@ function IntegrationsPageInner() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load on mount
     setOrigin(window.location.origin);
-    fetch("/api/integrations/webhook").then((r) => r.json()).then((d) => setWebhookToken(d.token));
+    fetch("/api/integrations/webhook").then((r) => r.json()).then((d) => {
+      setWebhookToken(d.token);
+      setOrgSlug(d.orgSlug);
+    });
     loadMetaStatus();
 
     const connected = searchParams.get("meta_connected");
@@ -78,6 +85,17 @@ function IntegrationsPageInner() {
 
   function webhookUrl() {
     return `${origin}/api/public/leads/webhook/${webhookToken}`;
+  }
+
+  function receptionUrl() {
+    return `${origin}/book/${orgSlug}?kiosk=1`;
+  }
+
+  function copyReceptionUrl() {
+    if (!orgSlug) return;
+    navigator.clipboard.writeText(receptionUrl());
+    setReceptionCopied(true);
+    setTimeout(() => setReceptionCopied(false), 2000);
   }
 
   async function selectPage(pageId: string) {
@@ -318,6 +336,59 @@ function IntegrationsPageInner() {
           >
             Go to Leads → Import CSV <ExternalLink className="h-3.5 w-3.5" />
           </Link>
+        </section>
+
+        {/* ── Reception / walk-in kiosk form ────────────────────────────── */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center gap-2">
+            <QrCode className="h-5 w-5 text-indigo-600" />
+            <h2 className="font-semibold">Reception / walk-in form</h2>
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              Ready now
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">
+            For visitors who walk into your office — put this on a tablet at reception, or print the QR code
+            so people scan it with their own phone while they wait. It&apos;s full-screen, touch-friendly, resets
+            itself after each submission, and tags leads &quot;Walk-in&quot; so they&apos;re easy to tell apart from
+            website traffic in your reports.
+          </p>
+
+          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={orgSlug ? receptionUrl() : "Loading…"}
+                  className="flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs"
+                  onFocus={(e) => e.target.select()}
+                />
+                <button
+                  onClick={copyReceptionUrl}
+                  disabled={!orgSlug}
+                  className="flex items-center gap-1 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {receptionCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {receptionCopied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Open this URL on any tablet or computer at your office and leave it there — no login needed,
+                and it&apos;s safe for the public since it only ever creates a new lead, nothing else.
+              </p>
+            </div>
+            {orgSlug && (
+              <div className="flex flex-col items-center gap-1">
+                {/* eslint-disable-next-line @next/next/no-img-element -- authenticated API-generated image, not a static asset */}
+                <img
+                  src="/api/integrations/reception/qrcode"
+                  alt="QR code linking to your reception sign-up form"
+                  className="h-32 w-32 rounded-md border border-slate-200"
+                />
+                <span className="text-xs text-slate-400">Scan to sign up</span>
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </div>
