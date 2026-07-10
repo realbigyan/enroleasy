@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { postInvoiceAccrual, postInvoicePayment } from "@/lib/accounting/invoice-posting";
 
 const createSchema = z.object({
   invoicerId: z.string().optional(),
@@ -81,6 +82,19 @@ export async function POST(req: NextRequest) {
       },
       include: { invoicer: true, student: true, partner: true },
     });
+
+    // Auto-post to the accounting ledger (NPR invoices only — see
+    // invoice-posting.ts). Failures here shouldn't block invoice creation
+    // for the CRM user, so log rather than throw.
+    try {
+      await postInvoiceAccrual(invoice, session.userId);
+      if (invoice.status === "PAID" && invoice.paidAt) {
+        await postInvoicePayment(invoice, session.userId, invoice.paidAt);
+      }
+    } catch (postingErr) {
+      console.error("Failed to auto-post invoice to ledger", invoice.id, postingErr);
+    }
+
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (err) {
     return handleApiError(err);

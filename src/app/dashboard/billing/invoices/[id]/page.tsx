@@ -21,6 +21,7 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
     ? `${invoice.invoicer.taxIdType}: ${invoice.invoicer.taxIdNumber}`
     : null;
   const hasBankDetails = invoice.invoicer.bankAccountNumber || invoice.invoicer.bankName;
+  const postedToLedger = invoice.currency.trim().toUpperCase() === "NPR";
 
   return (
     <div>
@@ -30,6 +31,12 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
         </Link>
         <PrintButton />
       </div>
+
+      {!postedToLedger && (
+        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 print:hidden">
+          Not posted to the accounting ledger — the ledger tracks NPR only, and this invoice is in {invoice.currency}. Record its NPR-equivalent manually via a journal entry if needed.
+        </p>
+      )}
 
       <div className="mt-4 rounded-xl border border-slate-200 bg-white p-8 print:border-0 print:p-0">
         <div className="flex items-start justify-between border-b border-slate-100 pb-6">
