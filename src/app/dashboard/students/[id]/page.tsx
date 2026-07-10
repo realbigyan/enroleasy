@@ -19,7 +19,7 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
   const student = await prisma.student.findUnique({
     where: { id },
     include: {
-      applications: { include: { destination: true } },
+      applications: { include: { destination: true, assignedDocOfficer: { select: { id: true, name: true } } } },
       testAttempts: { include: { mockTest: true }, orderBy: { startedAt: "desc" } },
       notes: { orderBy: { createdAt: "desc" } },
       educationRecords: true,
