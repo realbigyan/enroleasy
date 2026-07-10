@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Webhook, Facebook, Upload, Copy, Check, ExternalLink, AlertTriangle } from "lucide-react";
+import { Webhook, Link2, Upload, Copy, Check, ExternalLink, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 type MetaStatus = {
@@ -176,7 +176,7 @@ function IntegrationsPageInner() {
         {/* ── OPTION 2: Native Meta integration ────────────────────────── */}
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-2">
-            <Facebook className="h-5 w-5 text-indigo-600" />
+            <Link2 className="h-5 w-5 text-indigo-600" />
             <h2 className="font-semibold">Native Meta (Facebook) integration</h2>
             {metaStatus?.configured ? (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
@@ -242,7 +242,7 @@ function IntegrationsPageInner() {
                 href="/api/integrations/meta/connect"
                 className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white ${metaStatus?.configured ? "bg-indigo-600 hover:bg-indigo-700" : "pointer-events-none bg-slate-300"}`}
               >
-                <Facebook className="h-4 w-4" /> Connect Facebook Page
+                <Link2 className="h-4 w-4" /> Connect Facebook Page
               </a>
             )}
           </div>
