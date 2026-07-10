@@ -84,6 +84,8 @@ export async function POST(req: NextRequest) {
             organizationId: institution.organizationId,
             name: institution.name,
             country: institution.country,
+            type: institution.type,
+            locations: institution.locations,
             website: institution.website,
             logoUrl: institution.logoUrl,
             introduction: institution.introduction,
