@@ -35,7 +35,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       where: { id },
       include: {
         applications: { include: { destination: true } },
-        testAttempts: { include: { mockTest: true }, orderBy: { startedAt: "desc" } },
         notes: { orderBy: { createdAt: "desc" } },
         tasks: true,
         educationRecords: true,

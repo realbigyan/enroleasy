@@ -41,7 +41,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS: DefaultAccount[] = [
 
   // Income
   { code: "4000", name: "Income", type: "INCOME" },
-  { code: "4010", name: "Tuition / Test-Prep Fees", type: "INCOME", parentCode: "4000" },
+  { code: "4010", name: "Tuition / Membership Fees", type: "INCOME", parentCode: "4000" },
   { code: "4020", name: "Consultancy / Application Service Fees", type: "INCOME", parentCode: "4000" },
   { code: "4030", name: "Commission Income", type: "INCOME", parentCode: "4000" },
   { code: "4040", name: "Other Income", type: "INCOME", parentCode: "4000" },

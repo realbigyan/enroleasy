@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" role="img">
+<title>Lumeteq — beam mark icon</title>
+<desc>Standalone Lumeteq beam mark: a dark navy tile with a light beam cut through it and a gold spark where it exits.</desc>
+<defs><clipPath id="tileClip1i"><rect x="0" y="0" width="360" height="360" rx="84"/></clipPath></defs>
+<g clip-path="url(#tileClip1i)">
+<rect x="0" y="0" width="360" height="360" fill="#111827"/>
+<polygon points="70,320 130,320 300,50 240,50" fill="#FFFFFF"/>
+<circle cx="300" cy="50" r="36" fill="#D97706"/>
+</g>
+</svg>

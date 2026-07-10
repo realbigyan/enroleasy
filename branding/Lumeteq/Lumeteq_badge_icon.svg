@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+<title>Lumeteq — gradient badge icon</title>
+<desc>Standalone Lumeteq badge mark: a navy-to-gold gradient L with a glass highlight on a dark rounded plate.</desc>
+<defs>
+<radialGradient id="bgGlowBi" cx="50%" cy="30%" r="75%">
+<stop offset="0%" stop-color="#1E293B"/>
+<stop offset="100%" stop-color="#0B1120"/>
+</radialGradient>
+<linearGradient id="LgradBi" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#1E3A8A"/>
+<stop offset="100%" stop-color="#F59E0B"/>
+</linearGradient>
+</defs>
+<rect x="0" y="0" width="400" height="400" rx="90" fill="url(#bgGlowBi)"/>
+<rect x="90" y="60" width="220" height="280" rx="48" fill="#16213A"/>
+<polygon points="140,100 190,100 190,240 240,240 240,280 140,280" fill="url(#LgradBi)"/>
+<polygon points="150,105 168,105 145,275 138,275 138,255" fill="#FFFFFF" opacity="0.2"/>
+</svg>

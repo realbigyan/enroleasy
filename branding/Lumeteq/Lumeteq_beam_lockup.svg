@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" role="img">
+<title>Lumeteq — beam mark</title>
+<desc>Lumeteq logo: a dark navy tile with a light beam cut through it and a gold spark where it exits, beside the Lumeteq wordmark and tagline.</desc>
+<defs><clipPath id="tileClip1"><rect x="70" y="70" width="200" height="200" rx="46"/></clipPath></defs>
+<g clip-path="url(#tileClip1)">
+<rect x="70" y="70" width="200" height="200" fill="#111827"/>
+<polygon points="108.9,247.8 142.2,247.8 236.7,97.8 203.3,97.8" fill="#FFFFFF"/>
+<circle cx="236.7" cy="97.8" r="20" fill="#D97706"/>
+</g>
+<text x="320" y="195" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="92" letter-spacing="-2" fill="#111827">Lumeteq</text>
+<text x="323" y="240" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="22" letter-spacing="6" fill="#6B7280">THE FUTURE, ILLUMINATED</text>
+</svg>

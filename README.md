@@ -1,13 +1,10 @@
 # EnrolEasy
 
-A B2B SaaS platform for study-abroad and test-prep consultancies. Each consultancy
+A B2B SaaS platform for study-abroad consultancies. Each consultancy
 gets its own workspace with:
 
 - **CRM** — lead pipeline (stage-based kanban), student profiles, university/course
   applications, follow-up tasks, and notes.
-- **Test-prep platform** — mock tests for IELTS, PTE Academic, and the Duolingo
-  English Test, with objective auto-scoring and a placeholder scoring path for
-  writing/speaking responses (ready to be wired up to a real AI-grading service).
 - **Multi-tenancy** — every record is scoped to an `Organization`; users have
   roles (`OWNER`, `ADMIN`, `COUNSELOR`, `STUDENT`) that gate what they can do.
 - **Subscriptions** — a `Subscription` model (plan/status/seats) is in place so
@@ -26,8 +23,8 @@ gets its own workspace with:
 
 ```
 prisma/
-  schema.prisma       Multi-tenant CRM + test-prep data model
-  seed.ts             Demo organization, users, leads, students, mock tests
+  schema.prisma       Multi-tenant CRM data model
+  seed.ts             Demo organization, users, leads, students
 src/
   app/
     page.tsx            Marketing landing page
@@ -39,11 +36,9 @@ src/
       students/          Student list + profile
       applications/      Application tracker
       tasks/             Follow-up tasks
-      test-prep/         Module picker → mock test list → attempt → results
     api/
       auth/              register, login, logout, me
       leads/ students/ applications/ tasks/ notes/ destinations/   CRM CRUD
-      test-prep/          mock-tests, attempts, answers, submit (scoring)
   lib/
     prisma.ts           Prisma client singleton
     auth.ts             Password hashing, JWT sessions, cookie helpers
@@ -75,8 +70,7 @@ src/
    npx prisma migrate dev --name init
    ```
 
-4. **Seed demo data** (a consultancy, a counselor, a student, and sample
-   IELTS/PTE/Duolingo mock tests)
+4. **Seed demo data** (a consultancy, a counselor, and a student)
 
    ```bash
    npm run db:seed
@@ -103,26 +97,9 @@ src/
 > own machine (or CI) where that domain isn't blocked, and everything will
 > generate and run normally.
 
-## How the test-prep scoring works today
-
-- Objective question types (`MULTIPLE_CHOICE`, `TRUE_FALSE_NOTGIVEN`,
-  `MATCHING`, `FILL_BLANK`) are graded the instant a student answers, by exact
-  match against `Question.correctAnswer`.
-- Subjective types (`ESSAY` for Writing, `SPEAKING_PROMPT` for Speaking) get a
-  provisional score when the attempt is submitted
-  (`src/app/api/test-prep/attempts/[id]/submit/route.ts`), flagged in
-  `Answer.aiFeedback` as pending full review. Swap that placeholder block for
-  a real call to an LLM grader or human-review queue when you're ready.
-- Scores are normalized per test type: IELTS bands (0–9, nearest 0.5), PTE
-  (10–90), Duolingo (10–160).
-
 ## Roadmap / natural next steps
 
 - Stripe billing wired to the `Subscription` model (checkout, webhooks, seat limits).
-- Real audio recording/playback for Speaking and Listening items (currently a
-  transcript textarea stands in for the recorder).
-- AI-scored writing/speaking feedback (the `aiFeedback` field and submit route
-  are the integration point).
 - Org-level settings page (invite counselors, manage seats, branding).
 - Email notifications for task due-dates and application status changes.
 - Bulk lead import (CSV) and partner-agent referral tracking.

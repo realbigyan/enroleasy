@@ -1,5 +1,5 @@
 // EnrolEasy — multi-tenant B2B SaaS schema
-// Consultancy CRM + IELTS/PTE/Duolingo test-prep platform
+// Consultancy CRM + Nepal-compliant accounting platform
 
 generator client {
   provider = "prisma-client-js"
@@ -11,21 +11,20 @@ datasource db {
 
 // ─────────────────────────────────────────────
 // TENANCY & IDENTITY
-// Every record in the CRM/test-prep domain is scoped to an Organization
-// (the consultancy that pays for EnrolEasy). Students who log in to
-// practise tests also belong to the org that enrolled them.
+// Every record in the CRM domain is scoped to an Organization
+// (the consultancy that pays for EnrolEasy).
 // ─────────────────────────────────────────────
 
 enum Role {
   OWNER                 // consultancy account owner (billing, org settings)
-  ADMIN                 // full CRM + test-prep management
+  ADMIN                 // full CRM + accounting management
   ADMIN_ASSIST          // front-office: students, documents, invoices/receipts
   COUNSELOR             // manages leads/students/applications, no billing
-  TRAINER               // delivers classes, no CRM/billing access
-  EXAMINER              // grades writing/speaking attempts
-  CONTENT_MANAGER       // manages question bank / mock tests
+  TRAINER               // legacy role, no longer tied to an active feature
+  EXAMINER              // legacy role, no longer tied to an active feature
+  CONTENT_MANAGER       // legacy role, no longer tied to an active feature
   DOCUMENTATION_OFFICER // handles visa/application paperwork
-  STUDENT               // practice-platform-only access, scoped to own records
+  STUDENT               // legacy role, no longer tied to an active feature
 }
 
 enum SubscriptionPlan {
@@ -63,7 +62,6 @@ model Organization {
   tasks         Task[]
   notes         Note[]
   destinations  Destination[]
-  mockTests     MockTest[]
   subscription  Subscription?
   partners      Partner[]
   invoicers     Invoicer[]
@@ -121,7 +119,6 @@ model User {
   assignedTasks       Task[]        @relation("AssignedTo")
   notes               Note[]
   studentProfile      Student?      @relation("StudentUser")
-  testAttempts        TestAttempt[]
   uploadedDocuments    Document[]    @relation("UploadedBy")
   activityLogs         ActivityLog[] @relation("ActivityAuthor")
   auditLogs            AuditLog[]    @relation("AuditActor")
@@ -349,7 +346,6 @@ model Student {
   lastActivityAt  DateTime?
   archivedAt      DateTime?
   applications    Application[]
-  testAttempts    TestAttempt[]
   tasks           Task[]
   notes           Note[]
   educationRecords  EducationRecord[]
@@ -648,111 +644,15 @@ model Invoice {
 }
 
 // ─────────────────────────────────────────────
-// TEST-PREP DOMAIN — IELTS / PTE / Duolingo
+// Shared test-type enum, used by ExamBooking (tracking a student's real,
+// externally-sat IELTS/PTE/Duolingo exam) and by the institution/course
+// catalog's language entry requirements below.
 // ─────────────────────────────────────────────
 
 enum TestType {
   IELTS
   PTE
   DUOLINGO
-}
-
-enum SkillArea {
-  LISTENING
-  READING
-  WRITING
-  SPEAKING
-}
-
-enum QuestionType {
-  MULTIPLE_CHOICE
-  FILL_BLANK
-  ESSAY
-  SPEAKING_PROMPT
-  TRUE_FALSE_NOTGIVEN
-  MATCHING
-}
-
-model Question {
-  id           String       @id @default(cuid())
-  testType     TestType
-  skill        SkillArea
-  type         QuestionType
-  prompt       String
-  passageText  String?
-  audioUrl     String?
-  imageUrl     String?
-  options      Json?        // for multiple choice / matching
-  correctAnswer Json?
-  maxScore     Int          @default(1)
-  difficulty   Int          @default(1) // 1-5
-  mockTestId   String?
-  mockTest     MockTest?    @relation(fields: [mockTestId], references: [id], onDelete: SetNull)
-  createdAt    DateTime     @default(now())
-
-  answers      Answer[]
-
-  @@index([testType, skill])
-  @@map("questions")
-}
-
-model MockTest {
-  id             String       @id @default(cuid())
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId String?      // null = global/shared library test
-  title          String
-  testType       TestType
-  durationMins   Int
-  isPublished    Boolean      @default(true)
-  questions      Question[]
-  attempts       TestAttempt[]
-  createdAt      DateTime     @default(now())
-
-  @@map("mock_tests")
-}
-
-enum AttemptStatus {
-  IN_PROGRESS
-  SUBMITTED
-  SCORED
-}
-
-model TestAttempt {
-  id            String        @id @default(cuid())
-  mockTest      MockTest      @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
-  mockTestId    String
-  student       Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId     String?
-  user          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String?
-  status        AttemptStatus @default(IN_PROGRESS)
-  startedAt     DateTime      @default(now())
-  submittedAt   DateTime?
-  overallBand   Float?        // IELTS band / PTE 10-90 / Duolingo 10-160, normalized display
-  listeningScore Float?
-  readingScore   Float?
-  writingScore   Float?
-  speakingScore  Float?
-  answers        Answer[]
-
-  @@index([studentId])
-  @@map("test_attempts")
-}
-
-model Answer {
-  id            String      @id @default(cuid())
-  attempt       TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  attemptId     String
-  question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  questionId    String
-  responseText  String?
-  responseAudioUrl String?
-  isCorrect     Boolean?
-  scoreAwarded  Float?
-  aiFeedback    String?     // placeholder for future AI-scoring integration
-
-  @@unique([attemptId, questionId])
-  @@map("answers")
 }
 
 // ─────────────────────────────────────────────

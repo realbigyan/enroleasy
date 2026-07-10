@@ -21,7 +21,7 @@ import { seedChartOfAccounts } from "@/lib/accounting/chart-of-accounts";
 
 const FEE_TYPE_INCOME_ACCOUNT_CODE: Record<string, string> = {
   MANUAL: "4020", // Consultancy / Application Service Fees
-  MEMBERSHIP: "4010", // Tuition / Test-Prep Fees
+  MEMBERSHIP: "4010", // Tuition / Membership Fees
   COMMISSION: "4030", // Commission Income
 };
 

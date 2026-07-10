@@ -22,7 +22,6 @@ export default async function DashboardOverview() {
     tasksDue,
     revenueAgg,
     allLeadsForFunnel,
-    recentAttempts,
   ] = await Promise.all([
     prisma.lead.count({ where: { organizationId, stage: { notIn: ["ENROLLED", "LOST"] } } }),
     prisma.student.count({ where: { organizationId, archivedAt: null } }),
@@ -45,12 +44,6 @@ export default async function DashboardOverview() {
     }),
     prisma.invoice.aggregate({ where: { organizationId, status: "PAID" }, _sum: { amount: true } }),
     prisma.lead.findMany({ where: { organizationId }, select: { stage: true } }),
-    prisma.testAttempt.findMany({
-      where: { mockTest: { organizationId } },
-      include: { mockTest: true, student: true },
-      orderBy: { startedAt: "desc" },
-      take: 5,
-    }),
   ]);
 
   const stats = [
@@ -124,34 +117,6 @@ export default async function DashboardOverview() {
             ))}
           </ul>
         </div>
-      </div>
-
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="font-semibold">Recent test-prep attempts</h2>
-        {recentAttempts.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">No practice attempts yet.</p>
-        ) : (
-          <table className="mt-4 w-full text-sm">
-            <thead className="text-left text-slate-500">
-              <tr>
-                <th className="pb-2">Student</th>
-                <th className="pb-2">Test</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2">Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentAttempts.map((a: (typeof recentAttempts)[number]) => (
-                <tr key={a.id} className="border-t border-slate-100">
-                  <td className="py-2">{a.student?.fullName ?? "—"}</td>
-                  <td className="py-2">{a.mockTest.title}</td>
-                  <td className="py-2">{a.status}</td>
-                  <td className="py-2">{a.overallBand ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
       </div>
     </div>
   );

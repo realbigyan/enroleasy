@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 460" role="img">
+<title>Lumeteq — angle-bracket L mark with custom wordmark</title>
+<desc>Lumeteq logo: the letter L set between angle brackets like a code tag, beside a custom geometric wordmark "LUMETEQ" built entirely from straight strokes with a shared chamfer detail, and the tagline "the future, illuminated" beneath.</desc>
+<rect x="40" y="40" width="300" height="300" fill="#111827"/>
+<polygon points="152.5,130 152.5,149.5 97,199.75 97,180.25" fill="#FFFFFF"/>
+<polygon points="152.5,230.5 152.5,250 97,199.75 97,180.25" fill="#FFFFFF"/>
+<polygon points="181.75,130 190.75,130 190.75,230.5 216.25,230.5 216.25,250 171.25,250 171.25,140.5" fill="#FFFFFF"/>
+<polygon points="235,130 235,149.5 290.5,199.75 290.5,180.25" fill="#D97706"/>
+<polygon points="235,230.5 235,250 290.5,199.75 290.5,180.25" fill="#D97706"/>
+<polygon points="400,90 416,90 416,254 510,254 510,290 380,290 380,110" fill="#111827"/>
+<polygon points="558,90 574,90 574,254 642,254 642,90 678,90 678,290 538,290 538,110" fill="#111827"/>
+<polygon points="726,90 742,90 742,290 706,290 706,110" fill="#111827"/>
+<polygon points="840,90 876,90 876,290 840,290" fill="#111827"/>
+<polygon points="742,90 778,90 809,260 773,260" fill="#111827"/>
+<polygon points="804,90 840,90 809,260 773,260" fill="#111827"/>
+<polygon points="924,90 940,90 940,290 904,290 904,110" fill="#111827"/>
+<polygon points="940,90 1034,90 1034,126 940,126" fill="#111827"/>
+<polygon points="940,172 998,172 998,208 940,208" fill="#111827"/>
+<polygon points="940,254 1034,254 1034,290 940,290" fill="#111827"/>
+<polygon points="1062,110 1082,90 1202,90 1202,126 1062,126" fill="#111827"/>
+<polygon points="1114,126 1150,126 1150,290 1114,290" fill="#111827"/>
+<polygon points="1250,90 1266,90 1266,290 1230,290 1230,110" fill="#111827"/>
+<polygon points="1266,90 1360,90 1360,126 1266,126" fill="#111827"/>
+<polygon points="1266,172 1324,172 1324,208 1266,208" fill="#111827"/>
+<polygon points="1266,254 1360,254 1360,290 1266,290" fill="#111827"/>
+<polygon points="1388,110 1408,90 1538,90 1538,126 1388,126" fill="#111827"/>
+<polygon points="1388,254 1538,254 1538,290 1388,290" fill="#111827"/>
+<polygon points="1388,126 1424,126 1424,254 1388,254" fill="#111827"/>
+<polygon points="1502,126 1538,126 1538,254 1502,254" fill="#111827"/>
+<polygon points="1474.5,243.5 1564.5,333.5 1581.5,316.5 1491.5,226.5" fill="#111827"/>
+<text x="380" y="400" font-family="Arial, Helvetica, sans-serif" font-weight="500" font-size="26" letter-spacing="6" fill="#6B7280">THE FUTURE, ILLUMINATED</text>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 900" role="img">
+<title>Lumeteq</title>
+<desc>Lumeteq logo: a rounded navy tile with the letter L between angle brackets in white and gold, beside the wordmark LUMETE in bold geometric type and a large gold Q with a diagonal tail crossing its bowl, with the tagline "the future, illuminated" flanked by rules beneath.</desc>
+<rect x="60" y="270" width="340" height="340" rx="70" fill="#111827"/>
+<polygon points="187.5,372 187.5,394.1 124.6,451.05 124.6,428.95" fill="#FFFFFF"/>
+<polygon points="187.5,485.9 187.5,508 124.6,451.05 124.6,428.95" fill="#FFFFFF"/>
+<polygon points="220.65,372 230.85,372 230.85,485.9 259.75,485.9 259.75,508 208.75,508 208.75,383.9" fill="#FFFFFF"/>
+<polygon points="281,372 281,394.1 343.9,451.05 343.9,428.95" fill="#D97706"/>
+<polygon points="281,485.9 281,508 343.9,451.05 343.9,428.95" fill="#D97706"/>
+<text x="450" y="520" font-family="URW Gothic" font-weight="700" font-size="190" letter-spacing="2" fill="#111827">LUMETE</text>
+<circle cx="1235" cy="460" r="105" stroke="#D97706" stroke-width="46" fill="none"/>
+<polygon points="1267.9,535.3 1482.9,775.3 1517.1,744.7 1302.1,504.7" fill="#D97706"/>
+<line x1="60" y1="820" x2="472" y2="820" stroke="#6B7280" stroke-width="2"/>
+<line x1="1104" y1="820" x2="1517" y2="820" stroke="#6B7280" stroke-width="2"/>
+<text x="788" y="830" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="500" font-size="34" letter-spacing="6" fill="#6B7280">THE FUTURE, ILLUMINATED</text>
+</svg>

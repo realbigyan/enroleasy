@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  GraduationCap, Users, ClipboardList, Headphones, BarChart3, ShieldCheck,
+  GraduationCap, Users, ClipboardList, BarChart3, ShieldCheck,
   Calculator, Handshake, Landmark, ScrollText,
   Lock, Building2, CheckCircle2, ArrowRight, FolderOpen, SearchCheck,
 } from "lucide-react";
@@ -10,10 +10,10 @@ import {
 // ─────────────────────────────────────────────
 
 const stats = [
-  { value: "3", label: "Core modules — CRM, Test Prep & Accounting, in one login" },
+  { value: "2", label: "Core modules — CRM & Accounting, in one login" },
   { value: "9", label: "Staff roles for precise, need-to-know access control" },
-  { value: "3", label: "Test types supported — IELTS, PTE & Duolingo" },
   { value: "1", label: "Ledger — every invoice, expense, and payslip posts automatically" },
+  { value: "100%", label: "Nepal tax compliant — fiscal year, VAT, TDS & SSF payroll" },
 ];
 
 const pillars = [
@@ -27,17 +27,6 @@ const pillars = [
       "Multi-destination application tracking with detailed visa/paperwork stages",
       "Institution catalog with automated course-eligibility matching",
       "Partner & referral network with commission billing",
-    ],
-  },
-  {
-    icon: Headphones,
-    name: "Test Prep Platform",
-    description: "A built-in practice platform for every student you enroll.",
-    points: [
-      "IELTS, PTE, and Duolingo English Test mock tests",
-      "Instant objective scoring; examiner grading for writing & speaking",
-      "Skill-area breakdown across Listening, Reading, Writing, Speaking",
-      "A self-service student portal — fewer calls to your front desk",
     ],
   },
   {
@@ -60,7 +49,6 @@ const features = [
   { icon: FolderOpen, title: "Document management", body: "A categorized document vault per student, with rename, download, and bulk zip export for full application packages." },
   { icon: SearchCheck, title: "Institution & course matching", body: "Maintain your own institution catalog and instantly see which courses a student qualifies for based on their profile." },
   { icon: Handshake, title: "Partner & referral network", body: "Track referral partners and agents, and bill commissions directly from the same platform." },
-  { icon: Headphones, title: "IELTS / PTE / Duolingo practice", body: "Give every student a built-in practice platform with mock tests, instant objective scoring, and progress history." },
   { icon: Landmark, title: "Billing & invoicing", body: "Issue branded invoices and receipts to students or partners — automatically reflected in your accounting ledger." },
   { icon: Calculator, title: "Full accounting & payroll", body: "Chart of accounts, journal ledger, TDS/VAT, payroll, fixed assets, and financial reports — built for Nepal from the ground up." },
   { icon: ShieldCheck, title: "Team & role-based access", body: "Nine distinct staff roles — from Owner to Examiner — so every team member sees exactly what their job requires." },
@@ -71,8 +59,8 @@ const features = [
 
 const whyPoints = [
   {
-    title: "One login instead of five tools",
-    body: "Admissions CRM, test-prep platform, invoicing, and full bookkeeping usually mean stitching together separate products. EnrolEasy runs all of it from a single, connected system.",
+    title: "One login instead of several tools",
+    body: "Admissions CRM, invoicing, and full bookkeeping usually mean stitching together separate products. EnrolEasy runs all of it from a single, connected system.",
   },
   {
     title: "Nepal compliance built in, not bolted on",
@@ -84,7 +72,7 @@ const whyPoints = [
   },
   {
     title: "Built for teams, not just individuals",
-    body: "Nine distinct staff roles mean a counselor, a documentation officer, an examiner, and your accountant can all work in the same system without stepping on each other's data.",
+    body: "Nine distinct staff roles mean a counselor, a documentation officer, and your accountant can all work in the same system without stepping on each other's data.",
   },
 ];
 
@@ -105,7 +93,6 @@ const pricing = [
     features: [
       "Full CRM: leads, students, applications",
       "Full accounting & payroll module",
-      "IELTS / PTE / Duolingo test prep",
       "Role-based staff accounts",
       "Email support",
     ],
@@ -143,7 +130,7 @@ const pricing = [
 const faqs = [
   {
     q: "Is EnrolEasy built specifically for Nepal?",
-    a: "The accounting module is purpose-built for Nepal — the Nepali fiscal year, VAT and TDS rules under the Income Tax Act 2058, and Social Security Fund payroll are all native. The CRM and test-prep platform work for any study-abroad or test-prep consultancy, anywhere.",
+    a: "The accounting module is purpose-built for Nepal — the Nepali fiscal year, VAT and TDS rules under the Income Tax Act 2058, and Social Security Fund payroll are all native. The CRM works for any study-abroad consultancy, anywhere.",
   },
   {
     q: "Can I try it before paying?",
@@ -151,11 +138,11 @@ const faqs = [
   },
   {
     q: "Does every plan include the accounting module?",
-    a: "Yes. Every plan — Starter, Growth, and Scale — includes the full platform: CRM, test prep, and accounting. Plans differ by team size and support level, not by feature access.",
+    a: "Yes. Every plan — Starter, Growth, and Scale — includes the full platform: CRM and accounting. Plans differ by team size and support level, not by feature access.",
   },
   {
     q: "Can my whole team use it, or is this just for one person?",
-    a: "EnrolEasy is built for teams. Invite staff and assign one of nine roles — Owner, Admin, Counselor, Documentation Officer, Trainer, Examiner, Content Manager, Admin Assist, or Student — so everyone sees exactly what their job needs.",
+    a: "EnrolEasy is built for teams. Invite staff and assign the right role — Owner, Admin, Counselor, Documentation Officer, Admin Assist, and more — so everyone sees exactly what their job needs.",
   },
   {
     q: "Do I need a separate accounting system?",
@@ -211,15 +198,15 @@ export default function LandingPage() {
       <section className="border-b border-slate-200 bg-gradient-to-b from-indigo-50 to-white">
         <div className="mx-auto max-w-6xl px-6 py-20 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-wide text-indigo-600">
-            For study-abroad &amp; test-prep consultancies
+            For study-abroad consultancies
           </p>
           <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
-            One platform to run admissions, test prep, and finance — end to end.
+            One platform to run admissions and finance — end to end.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600">
-            EnrolEasy unifies a CRM built for education counselors, an IELTS / PTE / Duolingo practice
-            platform, and a full Nepal-compliant accounting system — so leads, applications, exam
-            readiness, and your books all live in one connected platform.
+            EnrolEasy unifies a CRM built for education counselors with a full Nepal-compliant
+            accounting system — so leads, applications, and your books all live in one connected
+            platform.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
@@ -253,10 +240,10 @@ export default function LandingPage() {
       {/* Platform pillars */}
       <section id="platform" className="mx-auto max-w-6xl px-6 py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight">Three modules. One platform.</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Two modules. One platform.</h2>
           <p className="mt-4 text-slate-600">
-            Most consultancies run admissions, exam prep, and bookkeeping in three unrelated tools.
-            EnrolEasy connects all three, so data entered once shows up everywhere it matters.
+            Most consultancies run admissions and bookkeeping in unrelated tools.
+            EnrolEasy connects both, so data entered once shows up everywhere it matters.
           </p>
         </div>
         <div className="mt-14 grid gap-8 lg:grid-cols-3">
@@ -345,7 +332,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight">Simple, per-seat pricing</h2>
             <p className="mt-4 text-slate-600">
-              Every plan includes the full platform — CRM, test prep, and accounting. Plans differ by
+              Every plan includes the full platform — CRM and accounting. Plans differ by
               team size and support level, not by feature access.
             </p>
           </div>
@@ -438,14 +425,13 @@ export default function LandingPage() {
                 EnrolEasy
               </div>
               <p className="mt-3 text-sm text-slate-500">
-                The all-in-one platform for study-abroad and test-prep consultancies.
+                The all-in-one platform for study-abroad consultancies.
               </p>
             </div>
             <div>
               <h4 className="text-sm font-semibold text-slate-900">Platform</h4>
               <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li><a href="#platform" className="hover:text-slate-900">CRM &amp; Admissions</a></li>
-                <li><a href="#platform" className="hover:text-slate-900">Test Prep</a></li>
                 <li><a href="#platform" className="hover:text-slate-900">Accounting &amp; Payroll</a></li>
                 <li><a href="#security" className="hover:text-slate-900">Security</a></li>
               </ul>
@@ -463,7 +449,6 @@ export default function LandingPage() {
               <h4 className="text-sm font-semibold text-slate-900">Built for</h4>
               <ul className="mt-3 space-y-2 text-sm text-slate-500">
                 <li>Study-abroad consultancies</li>
-                <li>IELTS / PTE / Duolingo test centers</li>
                 <li>Multi-branch education agencies</li>
               </ul>
             </div>

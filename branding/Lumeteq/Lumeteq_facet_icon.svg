@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+<title>Lumeteq — faceted crystal icon</title>
+<desc>Standalone Lumeteq faceted crystal mark: four angular facets shading from dark navy to bright gold, like a gem catching light.</desc>
+<polygon points="200,50 90,150 175,180" fill="#1E293B" stroke="#0B1120" stroke-width="1.5" stroke-linejoin="round"/>
+<polygon points="200,50 175,180 200,340" fill="#92662A" stroke="#0B1120" stroke-width="1.5" stroke-linejoin="round"/>
+<polygon points="200,50 200,340 225,180" fill="#C2760F" stroke="#0B1120" stroke-width="1.5" stroke-linejoin="round"/>
+<polygon points="200,50 225,180 310,150" fill="#F59E0B" stroke="#0B1120" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

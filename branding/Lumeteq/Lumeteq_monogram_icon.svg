@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" role="img">
+<title>Lumeteq — L monogram icon</title>
+<desc>Standalone Lumeteq L monogram: an L cut into a dark navy tile with a small gold spark on top.</desc>
+<defs><clipPath id="tileClip2i"><rect x="0" y="0" width="360" height="360" rx="84"/></clipPath></defs>
+<g clip-path="url(#tileClip2i)">
+<rect x="0" y="0" width="360" height="360" fill="#111827"/>
+<rect x="150" y="100" width="50" height="180" rx="10" fill="#FFFFFF"/>
+<rect x="150" y="250" width="130" height="50" rx="10" fill="#FFFFFF"/>
+<polygon points="175,45 205,75 175,105 145,75" fill="#D97706"/>
+</g>
+</svg>

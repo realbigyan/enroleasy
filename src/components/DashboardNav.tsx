@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   GraduationCap, LayoutDashboard, Users, UserSquare2, ClipboardList,
-  CheckSquare, Headphones, LogOut, Handshake, Receipt, ShieldCheck, ScrollText,
+  CheckSquare, LogOut, Handshake, Receipt, ShieldCheck, ScrollText,
   Landmark, SearchCheck, Settings, Crown, Calculator,
 } from "lucide-react";
 import clsx from "clsx";
@@ -16,7 +16,6 @@ const nav = [
   { href: "/dashboard/students", label: "Students", icon: UserSquare2, roles: null },
   { href: "/dashboard/applications", label: "Applications", icon: ClipboardList, roles: null },
   { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare, roles: null },
-  { href: "/dashboard/test-prep", label: "Test Prep", icon: Headphones, roles: null },
   { href: "/dashboard/institutions", label: "Institutions", icon: Landmark, roles: null },
   { href: "/dashboard/course-search", label: "Course Search", icon: SearchCheck, roles: ["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"] },
   { href: "/dashboard/partners", label: "Partners", icon: Handshake, roles: ["OWNER", "ADMIN", "COUNSELOR"] },

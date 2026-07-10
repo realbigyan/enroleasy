@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         organizationId: session.organizationId,
         ...(q ? { fullName: { contains: q, mode: "insensitive" } } : {}),
       },
-      include: { applications: true, testAttempts: { orderBy: { startedAt: "desc" }, take: 3 } },
+      include: { applications: true },
       orderBy: { updatedAt: "desc" },
     });
     return NextResponse.json({ students });

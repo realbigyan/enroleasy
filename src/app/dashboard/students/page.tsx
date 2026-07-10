@@ -10,7 +10,6 @@ type Student = {
   email: string | null;
   phone: string | null;
   applications: { id: string }[];
-  testAttempts: { id: string; overallBand: number | null; status: string }[];
 };
 
 export default function StudentsPage() {
@@ -95,7 +94,6 @@ export default function StudentsPage() {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Contact</th>
                 <th className="px-4 py-3">Applications</th>
-                <th className="px-4 py-3">Latest test score</th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +106,6 @@ export default function StudentsPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{s.email ?? s.phone ?? "—"}</td>
                   <td className="px-4 py-3">{s.applications.length}</td>
-                  <td className="px-4 py-3">{s.testAttempts[0]?.overallBand ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

@@ -20,7 +20,6 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
     where: { id },
     include: {
       applications: { include: { destination: true, assignedDocOfficer: { select: { id: true, name: true } } } },
-      testAttempts: { include: { mockTest: true }, orderBy: { startedAt: "desc" } },
       notes: { orderBy: { createdAt: "desc" } },
       educationRecords: true,
       emergencyContacts: true,
@@ -68,22 +67,6 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
 
         <EducationPanel studentId={student.id} records={student.educationRecords} />
         <EmergencyContactsPanel studentId={student.id} contacts={student.emergencyContacts} />
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="font-semibold">Test-prep history</h2>
-          {student.testAttempts.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No practice attempts yet.</p>
-          ) : (
-            <ul className="mt-3 space-y-3 text-sm">
-              {student.testAttempts.map((a: (typeof student.testAttempts)[number]) => (
-                <li key={a.id} className="border-t border-slate-100 pt-3 first:border-0 first:pt-0">
-                  <p className="font-medium">{a.mockTest.title} ({a.mockTest.testType})</p>
-                  <p className="text-slate-500">{a.status} · Score: {a.overallBand ?? "—"}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
 
         <ExamBookingsPanel studentId={student.id} bookings={student.examBookings.map((b: (typeof student.examBookings)[number]) => ({ ...b, examDate: b.examDate.toISOString() }))} />
 

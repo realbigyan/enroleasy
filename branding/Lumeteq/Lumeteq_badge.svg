@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 720" role="img">
+<title>Lumeteq — gradient badge</title>
+<desc>Lumeteq glossy badge: a navy-to-gold gradient L with a glass highlight on a dark rounded plate, with the LUMETEQ wordmark and tagline below.</desc>
+<defs>
+<radialGradient id="bgGlowB" cx="50%" cy="30%" r="75%">
+<stop offset="0%" stop-color="#1E293B"/>
+<stop offset="100%" stop-color="#0B1120"/>
+</radialGradient>
+<linearGradient id="LgradB" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#1E3A8A"/>
+<stop offset="100%" stop-color="#F59E0B"/>
+</linearGradient>
+</defs>
+<rect x="0" y="0" width="720" height="720" rx="110" fill="url(#bgGlowB)"/>
+<rect x="200" y="70" width="320" height="420" rx="70" fill="#16213A"/>
+<polygon points="260,140 340,140 340,370 420,370 420,430 260,430" fill="url(#LgradB)"/>
+<polygon points="273,148 300,148 266,362 258,362 258,340" fill="#FFFFFF" opacity="0.2"/>
+<text x="360" y="590" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="72" letter-spacing="4" fill="#FCD34D">LUMETEQ</text>
+<text x="360" y="632" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="500" font-size="24" letter-spacing="6" fill="#94A3B8">THE FUTURE, ILLUMINATED</text>
+</svg>
