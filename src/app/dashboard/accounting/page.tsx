@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, BookOpen, Receipt } from "lucide-react";
+import { Plus, BookOpen, Receipt, Landmark } from "lucide-react";
 
 type Account = {
   id: string;
@@ -91,6 +91,12 @@ export default function AccountingPage() {
           <p className="mt-1 text-sm text-slate-500">Chart of accounts and running balances, Nepal fiscal year (Shrawan–Ashadh).</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/accounting/banks"
+            className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+          >
+            <Landmark className="h-4 w-4" /> Bank & Cash
+          </Link>
           <Link
             href="/dashboard/accounting/expenses"
             className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"

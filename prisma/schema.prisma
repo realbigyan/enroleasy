@@ -926,10 +926,12 @@ model Account {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  journalLines    JournalLine[]
-  expenses        Expense[]    @relation("ExpenseCategoryAccount")
-  expensePayments Expense[]    @relation("ExpensePaymentAccount")
-  fixedAssets     FixedAsset[] @relation("FixedAssetAccount")
+  journalLines          JournalLine[]
+  expenses              Expense[]         @relation("ExpenseCategoryAccount")
+  expensePayments       Expense[]         @relation("ExpensePaymentAccount")
+  fixedAssets           FixedAsset[]      @relation("FixedAssetAccount")
+  bankAccount           BankAccount?
+  bankTransactionsAsCounter BankTransaction[]
 
   @@unique([organizationId, code])
   @@index([organizationId, type])
@@ -1026,10 +1028,15 @@ model Expense {
 }
 
 // Bank & cash accounts, plus their transaction ledger for reconciliation.
+// Each BankAccount is backed 1:1 by a GL Account (auto-created as a child of
+// "1010 Cash in Hand" or "1020 Bank Accounts") so its balance is always part
+// of the real double-entry books, not a separate shadow ledger.
 model BankAccount {
   id             String          @id @default(cuid())
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId String
+  account        Account         @relation(fields: [accountId], references: [id])
+  accountId      String          @unique
   name           String          // e.g. "NIC Asia - Operating", "Petty Cash"
   kind           BankAccountKind @default(BANK)
   accountNumber  String?
@@ -1047,14 +1054,19 @@ model BankAccount {
 }
 
 model BankTransaction {
-  id             String      @id @default(cuid())
-  bankAccount    BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  bankAccountId  String
-  date           DateTime
-  description    String
-  amount         Float       // positive = deposit, negative = withdrawal
-  reconciled     Boolean     @default(false)
-  createdAt      DateTime    @default(now())
+  id              String      @id @default(cuid())
+  bankAccount     BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  bankAccountId   String
+  // The other side of the double entry, e.g. an Income account for a
+  // deposit received directly, Equity for an owner's capital injection,
+  // Liability for loan proceeds, etc.
+  counterAccount  Account     @relation(fields: [counterAccountId], references: [id])
+  counterAccountId String
+  date            DateTime
+  description     String
+  amount          Float       // positive = deposit/inflow, negative = withdrawal/outflow
+  reconciled      Boolean     @default(false)
+  createdAt       DateTime    @default(now())
 
   @@index([bankAccountId])
   @@map("bank_transactions")
