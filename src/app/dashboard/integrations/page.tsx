@@ -171,6 +171,46 @@ function IntegrationsPageInner() {
               <li>Run the scenario once manually to confirm a lead shows up in EnrolEasy, then turn on scheduling.</li>
             </ol>
           </details>
+          <details className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+            <summary className="cursor-pointer font-medium text-slate-700">Setup notes — your own website&apos;s contact form</summary>
+            <p className="mt-2 text-slate-600">
+              Already have a signup or contact form on your own site? Connect it directly — no Zapier/Make account needed.
+            </p>
+            <p className="mt-3 font-medium text-slate-700">Option A — plain HTML, no JavaScript</p>
+            <p className="mt-1 text-slate-600">
+              Point your form&apos;s <code>action</code> at the webhook URL above, and add a hidden field with your
+              own thank-you page so visitors never leave your site:
+            </p>
+            <pre className="mt-2 overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100">
+{`<form action="${webhookToken ? webhookUrl() : "YOUR_WEBHOOK_URL"}" method="POST">
+  <input type="hidden" name="redirect" value="https://your-site.com/thank-you" />
+  <input name="fullName" placeholder="Full name" required />
+  <input name="email" type="email" placeholder="Email" />
+  <input name="phone" placeholder="Phone" />
+  <button type="submit">Send</button>
+</form>`}
+            </pre>
+            <p className="mt-3 font-medium text-slate-700">Option B — JS snippet, no page reload</p>
+            <p className="mt-1 text-slate-600">
+              For an inline, no-reload experience instead, add the script tag once and mark your form —
+              don&apos;t include the hidden <code>redirect</code> field for this option:
+            </p>
+            <pre className="mt-2 overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100">
+{`<script src="${origin || "https://enroleasy.com"}/embed/lead-form.js" async></script>
+<form data-enroleasy-lead="${webhookToken ? webhookUrl() : "YOUR_WEBHOOK_URL"}">
+  <input name="fullName" placeholder="Full name" required />
+  <input name="email" type="email" placeholder="Email" />
+  <input name="phone" placeholder="Phone" />
+  <button type="submit">Send</button>
+  <p data-enroleasy-success hidden>Thanks — we&apos;ll be in touch!</p>
+  <p data-enroleasy-error hidden></p>
+</form>`}
+            </pre>
+            <p className="mt-2 text-xs text-slate-400">
+              Either way, leads land in your pipeline tagged source &quot;Other&quot; by default — add a hidden{" "}
+              <code>source</code> field set to <code>WEBSITE</code> if you&apos;d rather tag them that way.
+            </p>
+          </details>
         </section>
 
         {/* ── OPTION 2: Native Meta integration ────────────────────────── */}
