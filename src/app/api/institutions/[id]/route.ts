@@ -10,6 +10,9 @@ const updateSchema = z.object({
   logoUrl: z.string().url().optional().nullable(),
   introduction: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
+  // Superadmin-only: promote an existing private institution into the shared
+  // global catalog (organizationId -> null) so every consultancy sees it.
+  makeGlobal: z.boolean().optional(),
 });
 
 async function assertAccessible(sessionOrgId: string, id: string) {
@@ -50,8 +53,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const session = await requireSession(["OWNER", "ADMIN", "CONTENT_MANAGER"]);
     await assertEditable(session.userId, session.organizationId, id);
-    const body = updateSchema.parse(await req.json());
-    const institution = await prisma.institution.update({ where: { id }, data: body });
+    const { makeGlobal, ...body } = updateSchema.parse(await req.json());
+
+    const data: typeof body & { organizationId?: null } = { ...body };
+    if (makeGlobal) {
+      const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { isSuperAdmin: true } });
+      if (!user?.isSuperAdmin) throw new ApiError(403, "Only a platform superadmin can add to the shared global catalog");
+      data.organizationId = null;
+    }
+
+    const institution = await prisma.institution.update({ where: { id }, data });
     return NextResponse.json({ institution });
   } catch (err) {
     return handleApiError(err);

@@ -52,18 +52,42 @@ export default function InstitutionDetailPage({ params }: { params: Promise<{ id
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyCourseForm);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [makingGlobal, setMakingGlobal] = useState(false);
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`/api/institutions/${id}`);
-    const data = await res.json();
+    const [instRes, meRes] = await Promise.all([fetch(`/api/institutions/${id}`), fetch("/api/auth/me")]);
+    const data = await instRes.json();
+    const me = await meRes.json().catch(() => ({}));
     setInstitution(data.institution ?? null);
+    setIsSuperAdmin(!!me.isSuperAdmin);
     setLoading(false);
+  }
+
+  async function makeGlobal() {
+    setMakingGlobal(true);
+    try {
+      const res = await fetch(`/api/institutions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ makeGlobal: true }),
+      });
+      if (res.ok) {
+        load();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? "Could not add to shared catalog");
+      }
+    } finally {
+      setMakingGlobal(false);
+    }
   }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load is stable per render, only id should re-trigger
   }, [id]);
 
   async function addCourse(e: React.FormEvent) {
@@ -114,8 +138,18 @@ export default function InstitutionDetailPage({ params }: { params: Promise<{ id
           )}
           {institution.introduction && <p className="mt-2 max-w-2xl text-sm text-slate-600">{institution.introduction}</p>}
         </div>
-        {institution.organizationId === null && (
+        {institution.organizationId === null ? (
           <span className="rounded bg-teal-50 px-2 py-0.5 text-xs text-teal-700">Shared catalog</span>
+        ) : (
+          isSuperAdmin && (
+            <button
+              onClick={makeGlobal}
+              disabled={makingGlobal}
+              className="rounded-md border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-50"
+            >
+              {makingGlobal ? "Adding…" : "Add to shared catalog"}
+            </button>
+          )
         )}
       </div>
 

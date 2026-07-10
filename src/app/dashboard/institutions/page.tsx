@@ -18,13 +18,16 @@ export default function InstitutionsPage() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", country: "", website: "", introduction: "" });
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [form, setForm] = useState({ name: "", country: "", website: "", introduction: "", isGlobal: false });
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/institutions");
-    const data = await res.json();
+    const [instRes, meRes] = await Promise.all([fetch("/api/institutions"), fetch("/api/auth/me")]);
+    const data = await instRes.json();
+    const me = await meRes.json().catch(() => ({}));
     setInstitutions(data.institutions ?? []);
+    setIsSuperAdmin(!!me.isSuperAdmin);
     setLoading(false);
   }
 
@@ -32,6 +35,15 @@ export default function InstitutionsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
     load();
   }, []);
+
+  useEffect(() => {
+    // Superadmins are almost always adding to the shared catalog, not a
+    // private one-off — default the checkbox to checked for them.
+    if (isSuperAdmin) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deriving a default from a value fetched on mount
+      setForm((f) => (f.isGlobal ? f : { ...f, isGlobal: true }));
+    }
+  }, [isSuperAdmin]);
 
   async function createInstitution(e: React.FormEvent) {
     e.preventDefault();
@@ -43,10 +55,11 @@ export default function InstitutionsPage() {
         country: form.country,
         website: form.website || undefined,
         introduction: form.introduction || undefined,
+        isGlobal: form.isGlobal,
       }),
     });
     if (res.ok) {
-      setForm({ name: "", country: "", website: "", introduction: "" });
+      setForm({ name: "", country: "", website: "", introduction: "", isGlobal: false });
       setShowForm(false);
       load();
     } else {
@@ -90,6 +103,14 @@ export default function InstitutionsPage() {
             onChange={(e) => setForm({ ...form, introduction: e.target.value })}
             rows={3}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
+          {isSuperAdmin && (
+            <label className="flex items-center gap-2 text-sm text-slate-600 sm:col-span-2">
+              <input type="checkbox" checked={form.isGlobal}
+                onChange={(e) => setForm({ ...form, isGlobal: e.target.checked })}
+                className="h-4 w-4 rounded border-slate-300" />
+              Add to shared global catalog (visible to every consultancy on the platform)
+            </label>
+          )}
           <button type="submit" className="sm:col-span-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
             Add institution
           </button>
