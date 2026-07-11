@@ -2,12 +2,22 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Webhook, Link2, Upload, Copy, Check, ExternalLink, AlertTriangle, QrCode } from "lucide-react";
+import { Webhook, Link2, Upload, Copy, Check, ExternalLink, AlertTriangle, QrCode, KeyRound, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 type MetaStatus = {
   configured: boolean;
   integration: { pageName: string; status: string; lastLeadAt: string | null; updatedAt: string } | null;
+};
+
+type ApiKeySummary = {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scope: "READ_ONLY" | "READ_WRITE";
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
 };
 
 export default function IntegrationsPage() {
@@ -37,6 +47,15 @@ function IntegrationsPageInner() {
   const [pendingPages, setPendingPages] = useState<{ id: string; name: string }[] | null>(null);
   const [metaBanner, setMetaBanner] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // ── Developer API keys ────────────────────────────────────────────────
+  const [apiKeys, setApiKeys] = useState<ApiKeySummary[] | null>(null);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newKeyScope, setNewKeyScope] = useState<"READ_ONLY" | "READ_WRITE">("READ_ONLY");
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [freshKey, setFreshKey] = useState<string | null>(null);
+  const [freshKeyCopied, setFreshKeyCopied] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load on mount
     setOrigin(window.location.origin);
@@ -45,6 +64,7 @@ function IntegrationsPageInner() {
       setOrgSlug(d.orgSlug);
     });
     loadMetaStatus();
+    loadApiKeys();
 
     const connected = searchParams.get("meta_connected");
     const error = searchParams.get("meta_error");
@@ -62,6 +82,46 @@ function IntegrationsPageInner() {
 
   function loadMetaStatus() {
     fetch("/api/integrations/meta/status").then((r) => r.json()).then(setMetaStatus);
+  }
+
+  function loadApiKeys() {
+    fetch("/api/api-keys").then((r) => r.json()).then((d) => setApiKeys(d.keys ?? []));
+  }
+
+  async function createApiKey(e: React.FormEvent) {
+    e.preventDefault();
+    setApiKeyError(null);
+    setCreatingKey(true);
+    try {
+      const res = await fetch("/api/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newKeyName, scope: newKeyScope }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setApiKeyError(data.error ?? "Could not create key");
+        return;
+      }
+      setFreshKey(data.plaintext);
+      setNewKeyName("");
+      loadApiKeys();
+    } finally {
+      setCreatingKey(false);
+    }
+  }
+
+  async function revokeApiKey(id: string) {
+    if (!confirm("Revoke this API key? Any script using it will stop working immediately.")) return;
+    await fetch(`/api/api-keys/${id}`, { method: "DELETE" });
+    loadApiKeys();
+  }
+
+  function copyFreshKey() {
+    if (!freshKey) return;
+    navigator.clipboard.writeText(freshKey);
+    setFreshKeyCopied(true);
+    setTimeout(() => setFreshKeyCopied(false), 2000);
   }
 
   async function rotateToken() {
@@ -124,7 +184,7 @@ function IntegrationsPageInner() {
     <div>
       <h1 className="text-2xl font-semibold">Integrations</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Get leads into EnrolEasy automatically, or bulk-upload them from a file.
+        Get leads into EnrolEasy automatically, bulk-upload them from a file, or connect your own tools via the API.
       </p>
 
       <div className="mt-6 space-y-6">
@@ -389,6 +449,138 @@ function IntegrationsPageInner() {
               </div>
             )}
           </div>
+        </section>
+
+        {/* ── Developer API keys ────────────────────────────────────────── */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-indigo-600" />
+            <h2 className="font-semibold">Developer API</h2>
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              Ready now
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">
+            Call EnrolEasy&apos;s REST API from your own scripts or BI tools — read/write leads, students, and
+            applications without opening the dashboard. Each key is scoped read-only or read-write and can be
+            revoked at any time.
+          </p>
+
+          {freshKey && (
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm font-medium text-amber-800">
+                Copy this key now — it won&apos;t be shown again.
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  readOnly
+                  value={freshKey}
+                  className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs"
+                  onFocus={(e) => e.target.select()}
+                />
+                <button
+                  onClick={copyFreshKey}
+                  className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50"
+                >
+                  {freshKeyCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {freshKeyCopied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <button
+                onClick={() => setFreshKey(null)}
+                className="mt-2 text-xs font-medium text-amber-700 hover:underline"
+              >
+                Done, hide this
+              </button>
+            </div>
+          )}
+
+          <form onSubmit={createApiKey} className="mt-4 flex flex-wrap items-end gap-2">
+            <div className="flex-1" style={{ minWidth: "160px" }}>
+              <label className="block text-xs font-medium text-slate-600">Key name</label>
+              <input
+                required
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="e.g. Reporting script"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600">Access</label>
+              <select
+                value={newKeyScope}
+                onChange={(e) => setNewKeyScope(e.target.value as "READ_ONLY" | "READ_WRITE")}
+                className="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="READ_ONLY">Read only</option>
+                <option value="READ_WRITE">Read + write</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={creatingKey}
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {creatingKey ? "Creating…" : "Create key"}
+            </button>
+          </form>
+          {apiKeyError && <p className="mt-2 text-sm text-red-600">{apiKeyError}</p>}
+
+          {apiKeys === null && <p className="mt-4 text-sm text-slate-400">Loading…</p>}
+          {apiKeys !== null && apiKeys.filter((k) => !k.revokedAt).length === 0 && (
+            <p className="mt-4 text-sm text-slate-400">No API keys yet.</p>
+          )}
+          {apiKeys !== null && apiKeys.filter((k) => !k.revokedAt).length > 0 && (
+            <ul className="mt-4 space-y-2">
+              {apiKeys.filter((k) => !k.revokedAt).map((k) => (
+                <li
+                  key={k.id}
+                  className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {k.name}{" "}
+                      <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+                        {k.scope === "READ_WRITE" ? "Read + write" : "Read only"}
+                      </span>
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      <code>{k.keyPrefix}…</code> · created {new Date(k.createdAt).toLocaleDateString()}
+                      {k.lastUsedAt ? ` · last used ${new Date(k.lastUsedAt).toLocaleDateString()}` : " · never used"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => revokeApiKey(k.id)}
+                    className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Revoke
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <details className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+            <summary className="cursor-pointer font-medium text-slate-700">Quick start — curl example</summary>
+            <p className="mt-2 text-slate-600">List your leads:</p>
+            <pre className="mt-2 overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100">
+{`curl "${origin || "https://enroleasy.com"}/api/v1/leads" \\
+  -H "Authorization: Bearer YOUR_API_KEY"`}
+            </pre>
+            <p className="mt-3 text-slate-600">Create a lead (requires a read-write key):</p>
+            <pre className="mt-2 overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100">
+{`curl -X POST "${origin || "https://enroleasy.com"}/api/v1/leads" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"fullName": "Jane Doe", "email": "jane@example.com"}'`}
+            </pre>
+            <p className="mt-2 text-xs text-slate-400">
+              Also available: <code>GET/PATCH /api/v1/leads/:id</code>, <code>GET/POST /api/v1/students</code>,{" "}
+              <code>GET /api/v1/students/:id</code>, <code>GET/POST /api/v1/applications</code>, and{" "}
+              <code>GET /api/v1/applications/:id</code>. Requests are rate-limited to 120/minute per key.
+            </p>
+          </details>
         </section>
       </div>
     </div>

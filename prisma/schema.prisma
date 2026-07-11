@@ -85,8 +85,39 @@ model Organization {
   bankAccounts   BankAccount[]
   fixedAssets    FixedAsset[]
   employees      Employee[]
+  apiKeys        ApiKey[]
 
   @@map("organizations")
+}
+
+// Developer API keys — lets an org call the public /api/v1/* REST API from
+// their own scripts/BI tools instead of using the session-cookie-based
+// dashboard API. The plaintext key (format "ee_live_<32 hex chars>") is only
+// ever shown once, at creation time; only its SHA-256 hash is stored, the
+// same pattern as PasswordResetToken. `keyPrefix` (the first 12 chars of the
+// plaintext) is kept in the clear purely so the settings UI can show enough
+// of the key to identify it ("ee_live_a1b2c3d4…") without exposing the whole
+// thing.
+enum ApiKeyScope {
+  READ_ONLY
+  READ_WRITE
+}
+
+model ApiKey {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  keyPrefix      String
+  keyHash        String       @unique
+  scope          ApiKeyScope  @default(READ_ONLY)
+  createdById    String
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("api_keys")
 }
 
 model Subscription {
