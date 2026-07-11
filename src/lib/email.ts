@@ -45,6 +45,31 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   return data;
 }
 
+export async function sendOrganizationDeletedEmail(to: string, orgName: string) {
+  const resend = getClient();
+  const { data, error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Your EnrolEasy organization "${orgName}" has been deleted`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color: #4338ca;">Organization deleted</h2>
+        <p>This confirms that <strong>${orgName}</strong> and all of its data (leads, students, applications,
+        documents, invoices, accounting records, and staff accounts) has been permanently deleted from EnrolEasy,
+        as requested.</p>
+        <p style="color: #64748b; font-size: 13px;">This action cannot be undone. If you did not request this deletion,
+        please contact us immediately.</p>
+      </div>
+    `,
+  });
+
+  if (error) {
+    throw new Error(`Resend failed to send: ${error.name ?? "unknown"} — ${error.message ?? JSON.stringify(error)}`);
+  }
+
+  return data;
+}
+
 export async function sendNotificationEmail(to: string, title: string, body: string, link?: string) {
   const resend = getClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://enroleasy.com";
