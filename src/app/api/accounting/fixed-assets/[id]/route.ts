@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -32,6 +33,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       where: { sourceType: "DEPRECIATION", sourceId: { in: depreciationEntries.map((d: { id: string }) => d.id) } },
     });
     await prisma.fixedAsset.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "FixedAsset",
+      entityId: id,
+      before: fixedAsset,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,14 +22,87 @@ export default function LoginPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Invalid credentials");
+      return;
+    }
+    if (data.twoFactorRequired) {
+      setChallengeToken(data.challengeToken);
       return;
     }
     router.push("/dashboard");
     router.refresh();
+  }
+
+  async function onVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/auth/verify-2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ challengeToken, code }),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Invalid verification code");
+      return;
+    }
+    router.push("/dashboard");
+    router.refresh();
+  }
+
+  if (challengeToken) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8">
+          <Link href="/" className="mb-6 flex items-center gap-2 font-semibold">
+            <LogoMark className="h-6 w-6" /> EnrolEasy
+          </Link>
+          <h1 className="text-xl font-semibold">Two-factor verification</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Enter the 6-digit code from your authenticator app.
+          </p>
+
+          <form onSubmit={onVerifyCode} className="mt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium">Verification code</label>
+              <input
+                required
+                inputMode="numeric"
+                autoFocus
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-center text-lg tracking-widest focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading || code.length !== 6}
+              className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {loading ? "Verifying…" : "Verify"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setChallengeToken(null);
+                setCode("");
+                setError(null);
+              }}
+              className="w-full text-center text-sm text-slate-500 hover:text-slate-700"
+            >
+              Back to login
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (

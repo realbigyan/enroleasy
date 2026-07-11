@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const upsertSchema = z.object({
   kind: z.enum(["PRIMARY", "SECONDARY"]),
@@ -23,6 +24,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { studentId_kind: { studentId, kind: body.kind } },
       create: { ...body, studentId },
       update: body,
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "upsert",
+      entityType: "EmergencyContact",
+      entityId: contact.id,
+      after: contact,
     });
     return NextResponse.json({ contact });
   } catch (err) {

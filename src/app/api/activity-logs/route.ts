@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   leadId: z.string().optional().nullable(),
@@ -39,6 +40,14 @@ export async function POST(req: NextRequest) {
     const body = createSchema.parse(await req.json());
     const log = await prisma.activityLog.create({
       data: { ...body, organizationId: session.organizationId, authorId: session.userId },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "ActivityLog",
+      entityId: log.id,
+      after: log,
     });
     if (body.studentId) {
       await prisma.student.update({ where: { id: body.studentId }, data: { lastActivityAt: new Date() } });

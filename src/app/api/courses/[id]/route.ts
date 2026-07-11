@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const updateSchema = z.object({
   name: z.string().min(2).optional(),
@@ -50,9 +51,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const session = await requireSession(["OWNER", "ADMIN", "CONTENT_MANAGER"]);
-    await assertCourseEditable(session.userId, session.organizationId, id);
+    const before = await assertCourseEditable(session.userId, session.organizationId, id);
     const body = updateSchema.parse(await req.json());
     const course = await prisma.course.update({ where: { id }, data: body });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Course",
+      entityId: id,
+      before,
+      after: course,
+    });
     return NextResponse.json({ course });
   } catch (err) {
     return handleApiError(err);
@@ -63,8 +73,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     const session = await requireSession(["OWNER", "ADMIN"]);
-    await assertCourseEditable(session.userId, session.organizationId, id);
+    const before = await assertCourseEditable(session.userId, session.organizationId, id);
     await prisma.course.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "Course",
+      entityId: id,
+      before,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

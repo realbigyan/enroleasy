@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-guard";
 import { notifySuperAdmins } from "@/lib/notify";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 const schema = z.object({
   organizationName: z.string().min(2),
@@ -21,6 +22,13 @@ function slugify(name: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    // 5 signups / 10 minutes per IP - signup is a heavier operation
+    // (creates an org + notifies superadmins), so the limit is stricter
+    // than login.
+    const { allowed, retryAfterSeconds } = await checkRateLimit(`register:${ip}`, 5, 600);
+    if (!allowed) return rateLimitResponse(retryAfterSeconds);
+
     const body = schema.parse(await req.json());
     const baseSlug = slugify(body.organizationName) || "consultancy";
     let slug = baseSlug;
@@ -54,13 +62,16 @@ export async function POST(req: NextRequest) {
     });
 
     const owner = org.users[0];
-    await setSessionCookie({
-      userId: owner.id,
-      organizationId: org.id,
-      role: owner.role,
-      name: owner.name,
-      email: owner.email,
-    });
+    await setSessionCookie(
+      {
+        userId: owner.id,
+        organizationId: org.id,
+        role: owner.role,
+        name: owner.name,
+        email: owner.email,
+      },
+      { userAgent: req.headers.get("user-agent"), ipAddress: ip }
+    );
 
     notifySuperAdmins({
       type: "org_pending_approval",

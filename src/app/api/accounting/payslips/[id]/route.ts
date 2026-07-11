@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -31,9 +32,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const session = await requireSession([...ACCOUNTING_ROLES]);
-    await assertOwned(id, session.organizationId);
+    const before = await assertOwned(id, session.organizationId);
     const body = updateSchema.parse(await req.json());
     const payslip = await prisma.payslip.update({ where: { id }, data: { paidAt: body.paid ? new Date() : null } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Payslip",
+      entityId: id,
+      before,
+      after: payslip,
+    });
     return NextResponse.json({ payslip });
   } catch (err) {
     return handleApiError(err);

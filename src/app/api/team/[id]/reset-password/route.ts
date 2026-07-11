@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { hashPassword } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,6 +17,16 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     const tempPassword = crypto.randomBytes(6).toString("base64url");
     const passwordHash = await hashPassword(tempPassword);
     await prisma.user.update({ where: { id }, data: { passwordHash } });
+
+    // Never persist the actual password (temp or otherwise) in the audit trail.
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "reset_password",
+      entityType: "User",
+      entityId: id,
+      after: { resetBy: session.userId },
+    });
 
     return NextResponse.json({ tempPassword });
   } catch (err) {

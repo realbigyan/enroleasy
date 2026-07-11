@@ -5,6 +5,7 @@ import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { getCurrentNepaliFiscalYear } from "@/lib/accounting/fiscal-year";
 import { computeMonthlyPayslip } from "@/lib/accounting/tds-rates";
 import { getSystemAccountByCode } from "@/lib/accounting/system-accounts";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -95,6 +96,15 @@ export async function POST(req: NextRequest) {
         createdById: session.userId,
         lines: { create: lines },
       },
+    });
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Payslip",
+      entityId: payslip.id,
+      after: payslip,
     });
 
     return NextResponse.json({ payslip }, { status: 201 });

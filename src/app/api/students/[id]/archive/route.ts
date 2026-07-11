@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -12,6 +13,15 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     const updated = await prisma.student.update({
       where: { id },
       data: { archivedAt: student.archivedAt ? null : new Date() },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: student.archivedAt ? "unarchive" : "archive",
+      entityType: "Student",
+      entityId: id,
+      before: student,
+      after: updated,
     });
     return NextResponse.json({ student: updated });
   } catch (err) {

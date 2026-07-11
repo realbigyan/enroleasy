@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { parseCsv } from "@/lib/csv";
+import { logAudit } from "@/lib/audit";
 import type { LeadSource } from "@prisma/client";
 
 // Bulk CSV import — option 3 of the lead-intake feature. A generic,
@@ -111,6 +112,15 @@ export async function POST(req: NextRequest) {
         errors.push({ row: i + 2, reason: err instanceof Error ? err.message : "Could not create lead" });
       }
     }
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "bulk_import",
+      entityType: "Lead",
+      entityId: "csv_import",
+      after: { createdCount: created, skippedCount: skippedDuplicates },
+    });
 
     return NextResponse.json({ created, skippedDuplicates, errors, totalRows: rows.length });
   } catch (err) {

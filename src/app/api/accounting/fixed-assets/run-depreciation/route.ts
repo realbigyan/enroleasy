@@ -5,6 +5,7 @@ import { requireSession, handleApiError } from "@/lib/api-guard";
 import { getCurrentNepaliFiscalYear, getFiscalYearBounds } from "@/lib/accounting/fiscal-year";
 import { computeDepreciationForYear } from "@/lib/accounting/depreciation";
 import { getSystemAccountByCode } from "@/lib/accounting/system-accounts";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -63,6 +64,16 @@ export async function POST(req: NextRequest) {
       });
       results.push({ assetId: asset.id, name: asset.name, amount });
     }
+
+    const entriesCreated = results.filter((r) => !r.skipped).length;
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "run_depreciation",
+      entityType: "FixedAsset",
+      entityId: fiscalYear,
+      after: { fiscalYear, entriesCreated },
+    });
 
     return NextResponse.json({ fiscalYear, results });
   } catch (err) {

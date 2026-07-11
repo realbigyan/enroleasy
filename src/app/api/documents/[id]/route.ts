@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { cloudinary } from "@/lib/cloudinary";
+import { logAudit } from "@/lib/audit";
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,6 +16,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       await cloudinary.uploader.destroy(document.publicId).catch(() => null);
     }
     await prisma.document.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "Document",
+      entityId: id,
+      before: document,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

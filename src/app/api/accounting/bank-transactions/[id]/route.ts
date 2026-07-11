@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -19,9 +20,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const session = await requireSession([...ACCOUNTING_ROLES]);
-    await assertOwned(session.organizationId, id);
+    const before = await assertOwned(session.organizationId, id);
     const body = updateSchema.parse(await req.json());
     const transaction = await prisma.bankTransaction.update({ where: { id }, data: { reconciled: body.reconciled } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "BankTransaction",
+      entityId: id,
+      before,
+      after: transaction,
+    });
     return NextResponse.json({ transaction });
   } catch (err) {
     return handleApiError(err);
@@ -32,9 +42,17 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     const session = await requireSession([...ACCOUNTING_ROLES]);
-    await assertOwned(session.organizationId, id);
+    const before = await assertOwned(session.organizationId, id);
     await prisma.journalEntry.deleteMany({ where: { sourceType: "BANK", sourceId: id } });
     await prisma.bankTransaction.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "BankTransaction",
+      entityId: id,
+      before,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

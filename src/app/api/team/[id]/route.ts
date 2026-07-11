@@ -47,6 +47,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     if (!existing || existing.organizationId !== session.organizationId) throw new ApiError(404, "User not found");
     if (existing.role === "OWNER") throw new ApiError(400, "Cannot delete the organization owner");
     await prisma.user.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "User",
+      entityId: id,
+      before: existing,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const updateSchema = z.object({
   status: z.enum([
@@ -28,6 +29,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         submittedAt: body.submittedAt ? new Date(body.submittedAt) : undefined,
         decisionAt: body.decisionAt ? new Date(body.decisionAt) : undefined,
       },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Application",
+      entityId: id,
+      before: existing,
+      after: application,
     });
     return NextResponse.json({ application });
   } catch (err) {

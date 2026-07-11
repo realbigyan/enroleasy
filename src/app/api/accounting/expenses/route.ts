@@ -5,6 +5,7 @@ import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { getNepaliFiscalYear } from "@/lib/accounting/fiscal-year";
 import { suggestExpenseTdsRate } from "@/lib/accounting/tds-rates";
 import { getSystemAccountByCode } from "@/lib/accounting/system-accounts";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -125,6 +126,15 @@ export async function POST(req: NextRequest) {
         createdById: session.userId,
         lines: { create: lines },
       },
+    });
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Expense",
+      entityId: expense.id,
+      after: expense,
     });
 
     return NextResponse.json({ expense }, { status: 201 });

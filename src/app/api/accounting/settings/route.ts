@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 // Org-level tax registration setting — VAT_REGISTERED orgs charge 13% VAT
 // on invoices and use the 1.5%/15% TDS split on expenses per Income Tax
@@ -31,6 +32,10 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await requireSession([...ACCOUNTING_ROLES]);
+    const before = await prisma.organization.findUnique({
+      where: { id: session.organizationId },
+      select: { id: true, name: true, taxRegistrationType: true, panVatNumber: true },
+    });
     const body = updateSchema.parse(await req.json());
     const organization = await prisma.organization.update({
       where: { id: session.organizationId },
@@ -39,6 +44,15 @@ export async function PATCH(req: NextRequest) {
         panVatNumber: body.panVatNumber,
       },
       select: { id: true, name: true, taxRegistrationType: true, panVatNumber: true },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Organization",
+      entityId: session.organizationId,
+      before,
+      after: organization,
     });
     return NextResponse.json({ organization });
   } catch (err) {

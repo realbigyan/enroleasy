@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -40,9 +41,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const session = await requireSession([...ACCOUNTING_ROLES]);
-    await assertOwned(id, session.organizationId);
+    const before = await assertOwned(id, session.organizationId);
     const body = updateSchema.parse(await req.json());
     const employee = await prisma.employee.update({ where: { id }, data: body });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Employee",
+      entityId: id,
+      before,
+      after: employee,
+    });
     return NextResponse.json({ employee });
   } catch (err) {
     return handleApiError(err);
@@ -53,7 +63,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     const session = await requireSession([...ACCOUNTING_ROLES]);
-    await assertOwned(id, session.organizationId);
+    const before = await assertOwned(id, session.organizationId);
     const payslips = await prisma.payslip.findMany({ where: { employeeId: id } });
     if (payslips.length > 0) {
       await prisma.journalEntry.deleteMany({
@@ -61,6 +71,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       });
     }
     await prisma.employee.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "Employee",
+      entityId: id,
+      before,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

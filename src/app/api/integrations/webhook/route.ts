@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 // Manages the org's secret lead-intake webhook token (option 1 of the lead
 // integrations feature). The token is embedded in the webhook URL itself
@@ -44,6 +45,15 @@ export async function POST() {
     await prisma.organization.update({
       where: { id: session.organizationId },
       data: { leadWebhookToken: token },
+    });
+    // Deliberately omit before/after — the audit log should not persist
+    // secret token values, only the fact that a rotation happened.
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "rotate_token",
+      entityType: "Organization",
+      entityId: session.organizationId,
     });
     return NextResponse.json({ token });
   } catch (err) {

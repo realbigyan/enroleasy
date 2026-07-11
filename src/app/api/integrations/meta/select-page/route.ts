@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { META_PENDING_PAGES_COOKIE, type MetaPage } from "@/lib/meta";
+import { logAudit } from "@/lib/audit";
 
 const STATE_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-me";
 const schema = z.object({ pageId: z.string() });
@@ -32,7 +33,8 @@ export async function POST(req: NextRequest) {
     const page = claims.pages.find((p) => p.id === pageId);
     if (!page) throw new ApiError(400, "That Page wasn't part of the original connection — start over.");
 
-    await prisma.metaIntegration.upsert({
+    const existing = await prisma.metaIntegration.findUnique({ where: { organizationId: session.organizationId } });
+    const integration = await prisma.metaIntegration.upsert({
       where: { organizationId: session.organizationId },
       create: {
         organizationId: session.organizationId,
@@ -49,6 +51,15 @@ export async function POST(req: NextRequest) {
         connectedByUserId: claims.userId,
         status: "CONNECTED",
       },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "connect",
+      entityType: "MetaIntegration",
+      entityId: integration.id,
+      before: existing ?? undefined,
+      after: integration,
     });
 
     cookieStore.delete(META_PENDING_PAGES_COOKIE);

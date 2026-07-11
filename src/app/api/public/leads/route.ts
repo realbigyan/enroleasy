@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { handleApiError, ApiError } from "@/lib/api-guard";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 // Public, unauthenticated endpoint — the intake form for an org's marketing
 // site (e.g. "book a free trial class") posts here directly. Identifies the
@@ -23,6 +24,12 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    // 20 submissions / 5 minutes per IP - loose enough for a busy walk-in
+    // kiosk shared by many visitors, tight enough to blunt scripted spam.
+    const { allowed, retryAfterSeconds } = await checkRateLimit(`public-leads:${ip}`, 20, 300);
+    if (!allowed) return rateLimitResponse(retryAfterSeconds);
+
     const body = schema.parse(await req.json());
     if (body.website) {
       // Silently accept but drop honeypot-triggered submissions.

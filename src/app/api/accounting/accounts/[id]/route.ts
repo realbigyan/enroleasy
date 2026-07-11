@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -41,9 +42,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const session = await requireSession([...ACCOUNTING_ROLES]);
-    await assertOwned(session.organizationId, id);
+    const before = await assertOwned(session.organizationId, id);
     const body = updateSchema.parse(await req.json());
     const account = await prisma.account.update({ where: { id }, data: body });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Account",
+      entityId: id,
+      before,
+      after: account,
+    });
     return NextResponse.json({ account });
   } catch (err) {
     return handleApiError(err);
@@ -64,6 +74,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       throw new ApiError(400, "Cannot delete an account that has sub-accounts — reassign or delete those first");
     }
     await prisma.account.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "Account",
+      entityId: id,
+      before: account,
+    });
     return NextResponse.json({ ok: true, accountCode: account.code });
   } catch (err) {
     return handleApiError(err);

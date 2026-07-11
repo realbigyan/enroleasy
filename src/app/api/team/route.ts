@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { hashPassword } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 const STAFF_ROLES = ["OWNER", "ADMIN", "ADMIN_ASSIST", "COUNSELOR", "TRAINER", "EXAMINER", "CONTENT_MANAGER", "DOCUMENTATION_OFFICER"] as const;
 
@@ -61,6 +62,14 @@ export async function POST(req: NextRequest) {
         passwordHash,
       },
       select: { id: true, name: true, email: true, role: true, isActive: true },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "User",
+      entityId: user.id,
+      after: user,
     });
     return NextResponse.json({ user }, { status: 201 });
   } catch (err) {

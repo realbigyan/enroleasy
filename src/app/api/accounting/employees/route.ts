@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -41,6 +42,14 @@ export async function POST(req: NextRequest) {
         allowances: body.allowances,
         ssfEnrolled: body.ssfEnrolled,
       },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Employee",
+      entityId: employee.id,
+      after: employee,
     });
     return NextResponse.json({ employee }, { status: 201 });
   } catch (err) {

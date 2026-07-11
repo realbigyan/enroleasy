@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { STAGE_VALUES, STAGE_LABELS } from "@/lib/application-stages";
+import { logAudit } from "@/lib/audit";
 
 const updateSchema = z
   .object({
@@ -53,6 +54,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
       }),
     ]);
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "stage_change",
+      entityType: "Application",
+      entityId: id,
+      before: existing,
+      after: application,
+    });
 
     return NextResponse.json({ application });
   } catch (err) {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { INSTITUTION_TYPES } from "@/lib/institution-types";
+import { logAudit } from "@/lib/audit";
 
 const rankingSchema = z.object({
   scope: z.string().min(1),
@@ -69,6 +70,14 @@ export async function POST(req: NextRequest) {
         rankings: { create: body.rankings },
       },
       include: { rankings: true },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Institution",
+      entityId: institution.id,
+      after: institution,
     });
     return NextResponse.json({ institution }, { status: 201 });
   } catch (err) {

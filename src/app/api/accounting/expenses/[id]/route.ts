@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -32,6 +33,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
     await prisma.journalEntry.deleteMany({ where: { sourceType: "EXPENSE", sourceId: id } });
     await prisma.expense.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "Expense",
+      entityId: id,
+      before: expense,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

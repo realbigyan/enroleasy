@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const SUBSCRIPTION_PLANS = ["STARTER", "GROWTH", "SCALE"] as const;
 const SUBSCRIPTION_STATUSES = ["PENDING_APPROVAL", "TRIALING", "ACTIVE", "PAST_DUE", "CANCELED"] as const;
@@ -16,12 +17,14 @@ const updateSchema = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireSuperAdmin();
+    const session = await requireSuperAdmin();
     const { id } = await params;
     const body = updateSchema.parse(await req.json());
 
     const org = await prisma.organization.findUnique({ where: { id } });
     if (!org) throw new ApiError(404, "Organization not found");
+
+    const existingSubscription = await prisma.subscription.findUnique({ where: { organizationId: id } });
 
     const subscription = await prisma.subscription.upsert({
       where: { organizationId: id },
@@ -40,6 +43,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           ? { trialEndsAt: body.trialEndsAt ? new Date(body.trialEndsAt) : null }
           : {}),
       },
+    });
+
+    // Superadmin isn't necessarily a member of the org being edited, so the
+    // audit entry is filed under the TARGET organization's own trail rather
+    // than the superadmin's own organizationId.
+    await logAudit({
+      organizationId: id,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Organization",
+      entityId: id,
+      before: existingSubscription ?? undefined,
+      after: subscription,
     });
 
     return NextResponse.json({ subscription });

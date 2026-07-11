@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { handleApiError, ApiError } from "@/lib/api-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import type { LeadSource } from "@prisma/client";
 
 // Generic incoming lead webhook — option 1 of the lead-intake feature.
@@ -84,6 +85,15 @@ async function parseBody(req: NextRequest): Promise<Record<string, unknown>> {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
     const { token } = await params;
+
+    // Keyed by the webhook token itself (not IP) - callers here are
+    // third-party services (Zapier, Make, a consultancy's own site) whose
+    // IPs vary or are shared across many customers, but the token uniquely
+    // identifies one org's inbound feed. 60/min comfortably covers a real
+    // burst of ad-lead deliveries while still capping runaway retries.
+    const { allowed, retryAfterSeconds } = await checkRateLimit(`lead-webhook:${token}`, 60, 60);
+    if (!allowed) return withCors(rateLimitResponse(retryAfterSeconds));
+
     const org = await prisma.organization.findUnique({ where: { leadWebhookToken: token } });
     if (!org) throw new ApiError(404, "Unknown or rotated webhook token");
 

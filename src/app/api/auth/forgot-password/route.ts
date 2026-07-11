@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { handleApiError } from "@/lib/api-guard";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().email() });
 
@@ -13,6 +14,12 @@ function hashToken(raw: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    // 5 requests / 15 minutes per IP - this endpoint sends an email and
+    // creates a DB row, so it's a heavier abuse target than a login attempt.
+    const { allowed, retryAfterSeconds } = await checkRateLimit(`forgot-password:${ip}`, 5, 900);
+    if (!allowed) return rateLimitResponse(retryAfterSeconds);
+
     const body = schema.parse(await req.json());
     const email = body.email.toLowerCase();
 

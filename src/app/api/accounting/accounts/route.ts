@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
 import { seedChartOfAccounts } from "@/lib/accounting/chart-of-accounts";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -67,6 +68,14 @@ export async function POST(req: NextRequest) {
         parentId: body.parentId ?? null,
         description: body.description ?? null,
       },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Account",
+      entityId: account.id,
+      after: account,
     });
     return NextResponse.json({ account }, { status: 201 });
   } catch (err) {

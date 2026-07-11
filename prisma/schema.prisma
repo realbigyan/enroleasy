@@ -117,6 +117,11 @@ model User {
   avatarUrl      String?
   isActive       Boolean      @default(true)
   isSuperAdmin   Boolean      @default(false) // platform-level: can manage the shared global institution catalog
+  // TOTP two-factor auth (RFC 6238) — secret is only ever set once the user
+  // has confirmed a valid code during setup, so `twoFactorEnabled` is the
+  // single source of truth for whether login requires a second step.
+  twoFactorSecret  String?
+  twoFactorEnabled Boolean  @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -131,9 +136,41 @@ model User {
   notifications        Notification[]
   assignedApplications Application[] @relation("AssignedDocOfficer")
   employeeProfiles     Employee[]
+  sessions             Session[]
 
   @@unique([organizationId, email])
   @@map("users")
+}
+
+// One row per active login. The session JWT cookie carries this row's id
+// (`sid`) so a session can be revoked immediately (force-logout, "log out
+// other devices") without waiting for the 7-day JWT to expire naturally —
+// getSession() checks revokedAt on every request.
+model Session {
+  id         String    @id @default(cuid())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// Fixed-window rate limiting backed by Postgres (not in-memory, since
+// serverless functions don't share memory across instances/cold-starts).
+// `key` is a caller-defined bucket like "login:<ip>" or "webhook:<token>";
+// each request upserts the row for the current window and increments count.
+model RateLimitBucket {
+  key         String
+  windowStart DateTime
+  count       Int      @default(1)
+
+  @@id([key, windowStart])
+  @@map("rate_limit_buckets")
 }
 
 // Single-use tokens for the forgot-password flow. We store a hash of the

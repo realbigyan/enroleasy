@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const DOCUMENT_TYPES = [
   "PASSPORT", "TRANSCRIPT", "VISA", "OFFER_LETTER", "CERTIFICATE", "OTHER",
@@ -52,6 +53,14 @@ export async function POST(req: NextRequest) {
         organizationId: session.organizationId,
         uploadedById: session.userId,
       },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "upload",
+      entityType: "Document",
+      entityId: document.id,
+      after: document,
     });
     return NextResponse.json({ document }, { status: 201 });
   } catch (err) {

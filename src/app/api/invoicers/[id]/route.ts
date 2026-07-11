@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const updateSchema = z.object({
   isDefault: z.boolean().optional(),
@@ -58,6 +59,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const invoicer = await prisma.invoicer.update({ where: { id }, data: body });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "update",
+      entityType: "Invoicer",
+      entityId: id,
+      before: existing,
+      after: invoicer,
+    });
     return NextResponse.json({ invoicer });
   } catch (err) {
     return handleApiError(err);

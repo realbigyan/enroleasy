@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 import type { TaskStatus } from "@prisma/client";
 
 const createSchema = z.object({
@@ -40,6 +41,14 @@ export async function POST(req: NextRequest) {
         dueAt: body.dueAt ? new Date(body.dueAt) : null,
         organizationId: session.organizationId,
       },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Task",
+      entityId: task.id,
+      after: task,
     });
     return NextResponse.json({ task }, { status: 201 });
   } catch (err) {

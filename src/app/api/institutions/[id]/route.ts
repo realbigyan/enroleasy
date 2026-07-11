@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { INSTITUTION_TYPES } from "@/lib/institution-types";
+import { logAudit } from "@/lib/audit";
 
 const rankingSchema = z.object({
   scope: z.string().min(1),
@@ -68,7 +69,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const session = await requireSession(["OWNER", "ADMIN", "CONTENT_MANAGER"]);
-    await assertEditable(session.userId, session.organizationId, id);
+    const before = await assertEditable(session.userId, session.organizationId, id);
     const { makeGlobal, rankings, ...body } = updateSchema.parse(await req.json());
 
     const data: typeof body & { organizationId?: null } = { ...body };
@@ -89,6 +90,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       },
       include: { courses: { orderBy: { name: "asc" } }, rankings: { orderBy: { rank: "asc" } } },
     });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: makeGlobal ? "promote_to_global" : "update",
+      entityType: "Institution",
+      entityId: id,
+      before,
+      after: institution,
+    });
     return NextResponse.json({ institution });
   } catch (err) {
     return handleApiError(err);
@@ -99,8 +109,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     const session = await requireSession(["OWNER", "ADMIN"]);
-    await assertEditable(session.userId, session.organizationId, id);
+    const before = await assertEditable(session.userId, session.organizationId, id);
     await prisma.institution.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "Institution",
+      entityId: id,
+      before,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

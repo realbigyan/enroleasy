@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { getNepaliFiscalYear } from "@/lib/accounting/fiscal-year";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -80,6 +81,15 @@ export async function POST(req: NextRequest) {
           ],
         },
       },
+    });
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "FixedAsset",
+      entityId: fixedAsset.id,
+      after: fixedAsset,
     });
 
     return NextResponse.json({ fixedAsset }, { status: 201 });

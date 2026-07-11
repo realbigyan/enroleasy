@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -33,6 +34,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       throw new ApiError(400, "This entry was auto-posted and can't be deleted directly — reverse it from its source record instead");
     }
     await prisma.journalEntry.delete({ where: { id } });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "JournalEntry",
+      entityId: id,
+      before: entry,
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleApiError(err);

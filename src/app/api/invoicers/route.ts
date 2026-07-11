@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const brandingFields = {
   receiptPrefix: z.string().optional().nullable(),
@@ -52,6 +53,14 @@ export async function POST(req: NextRequest) {
         organizationId: session.organizationId,
         isDefault: existingCount === 0, // first invoicer becomes default automatically
       },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Invoicer",
+      entityId: invoicer.id,
+      after: invoicer,
     });
     return NextResponse.json({ invoicer }, { status: 201 });
   } catch (err) {

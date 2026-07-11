@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
+import { logAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   name: z.string().min(2),
@@ -37,6 +38,14 @@ export async function POST(req: NextRequest) {
     const body = createSchema.parse(await req.json());
     const partner = await prisma.partner.create({
       data: { ...body, organizationId: session.organizationId },
+    });
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Partner",
+      entityId: partner.id,
+      after: partner,
     });
     return NextResponse.json({ partner }, { status: 201 });
   } catch (err) {

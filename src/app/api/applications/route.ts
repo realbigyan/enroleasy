@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { notifyRole, notifyUsers } from "@/lib/notify";
+import { logAudit } from "@/lib/audit";
 import type { ApplicationStatus } from "@prisma/client";
 
 const createSchema = z.object({
@@ -51,6 +52,15 @@ export async function POST(req: NextRequest) {
     const application = await prisma.application.create({
       data: { ...body, organizationId: session.organizationId },
       include: { student: true, destination: true, assignedDocOfficer: true },
+    });
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "Application",
+      entityId: application.id,
+      after: application,
     });
 
     // Notify whoever needs to pick this up next: the specifically assigned

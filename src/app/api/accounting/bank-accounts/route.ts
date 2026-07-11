@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
 import { getSystemAccountByCode } from "@/lib/accounting/system-accounts";
 import { getCurrentNepaliFiscalYear } from "@/lib/accounting/fiscal-year";
+import { logAudit } from "@/lib/audit";
 
 const ACCOUNTING_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -109,6 +110,15 @@ export async function POST(req: NextRequest) {
         },
       });
     }
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "create",
+      entityType: "BankAccount",
+      entityId: bankAccount.id,
+      after: bankAccount,
+    });
 
     return NextResponse.json({ bankAccount }, { status: 201 });
   } catch (err) {

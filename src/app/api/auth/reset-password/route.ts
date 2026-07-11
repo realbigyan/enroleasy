@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { ApiError, handleApiError } from "@/lib/api-guard";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 const schema = z.object({
   token: z.string().min(1),
@@ -16,6 +17,12 @@ function hashToken(raw: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    // 10 attempts / 15 minutes per IP - guards against brute-forcing the
+    // reset token itself.
+    const { allowed, retryAfterSeconds } = await checkRateLimit(`reset-password:${ip}`, 10, 900);
+    if (!allowed) return rateLimitResponse(retryAfterSeconds);
+
     const body = schema.parse(await req.json());
     const tokenHash = hashToken(body.token);
 
