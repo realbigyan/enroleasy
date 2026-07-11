@@ -12,6 +12,7 @@ import {
 } from "@/components/student/StudentDetailPanels";
 import { PrintButton } from "@/components/student/PrintButton";
 import { ApplicationsPanel } from "@/components/student/ApplicationsPanel";
+import { CustomFieldsPanel } from "@/components/CustomFieldsPanel";
 
 export default async function StudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -94,6 +95,10 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
         <div className="print:hidden">
           <ActivityTimeline studentId={student.id} />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <CustomFieldsPanel entityType="STUDENT" entityId={student.id} />
       </div>
 
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">

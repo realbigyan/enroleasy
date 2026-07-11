@@ -86,8 +86,79 @@ model Organization {
   fixedAssets    FixedAsset[]
   employees      Employee[]
   apiKeys        ApiKey[]
+  pipelineStageConfigs   PipelineStageConfig[]
+  customFieldDefinitions CustomFieldDefinition[]
 
   @@map("organizations")
+}
+
+// Lets an org customize the display of the (still fixed) LeadStage enum —
+// reorder columns, rename labels, and hide stages they don't use — without
+// the risk of a full dynamic-enum migration touching every place Lead.stage
+// is read. Lazily seeded with one row per LeadStage value (in enum
+// declaration order, default label = prettified enum name) the first time
+// an org fetches its config; see src/lib/pipeline-stages.ts.
+model PipelineStageConfig {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  stage          LeadStage
+  label          String
+  order          Int
+  isActive       Boolean      @default(true)
+
+  @@unique([organizationId, stage])
+  @@index([organizationId, order])
+  @@map("pipeline_stage_configs")
+}
+
+// Generic custom fields — lets an org track extra data on leads/students/
+// applications without a schema change per org. Definitions describe the
+// field (name/type/options); CustomFieldValue holds one value per
+// (definition, entity) pair. Values are always stored as text and
+// parsed/rendered per fieldType in the UI, the same tradeoff most
+// spreadsheet-like custom-field systems make.
+enum CustomFieldEntityType {
+  LEAD
+  STUDENT
+  APPLICATION
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+}
+
+model CustomFieldDefinition {
+  id             String                @id @default(cuid())
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  entityType     CustomFieldEntityType
+  name           String
+  fieldType      CustomFieldType       @default(TEXT)
+  options        String[]              @default([]) // choice list, only used when fieldType = SELECT
+  order          Int                   @default(0)
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+
+  values         CustomFieldValue[]
+
+  @@index([organizationId, entityType])
+  @@map("custom_field_definitions")
+}
+
+model CustomFieldValue {
+  id           String                @id @default(cuid())
+  definition   CustomFieldDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  definitionId String
+  entityId     String                // id of the Lead/Student/Application row this value belongs to
+  value        String?
+
+  @@unique([definitionId, entityId])
+  @@index([entityId])
+  @@map("custom_field_values")
 }
 
 // Developer API keys — lets an org call the public /api/v1/* REST API from

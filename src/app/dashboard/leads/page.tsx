@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Plus, Upload } from "lucide-react";
 import { LeadImportModal } from "@/components/LeadImportModal";
 
-const STAGES = [
+// Fixed underlying enum values — still the full set of stages a lead can be
+// in, and used as a fallback until the org's pipeline stage config loads.
+const ALL_STAGES = [
   "NEW", "CONTACTED", "TRIAL_BOOKED", "TRIAL_DONE", "QUALIFIED", "COUNSELING",
   "APPLICATION_STARTED", "OFFER_RECEIVED", "VISA_STAGE", "ENROLLED", "LOST",
 ] as const;
@@ -14,12 +16,21 @@ type Lead = {
   fullName: string;
   email: string | null;
   phone: string | null;
-  stage: (typeof STAGES)[number];
+  stage: (typeof ALL_STAGES)[number];
   interestedCountry: string | null;
+};
+
+type StageConfig = {
+  id: string;
+  stage: (typeof ALL_STAGES)[number];
+  label: string;
+  order: number;
+  isActive: boolean;
 };
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [stageConfigs, setStageConfigs] = useState<StageConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -27,9 +38,16 @@ export default function LeadsPage() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/leads");
-    const data = await res.json();
-    setLeads(data.leads ?? []);
+    const [leadsRes, stagesRes] = await Promise.all([
+      fetch("/api/leads"),
+      fetch("/api/pipeline-stages"),
+    ]);
+    const leadsData = await leadsRes.json();
+    const stagesData = await stagesRes.json();
+    setLeads(leadsData.leads ?? []);
+    setStageConfigs(
+      (stagesData.stages ?? []).slice().sort((a: StageConfig, b: StageConfig) => a.order - b.order)
+    );
     setLoading(false);
   }
 
@@ -37,6 +55,20 @@ export default function LeadsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
     load();
   }, []);
+
+  // Columns shown on the board: active stages in the org's configured order,
+  // falling back to the full enum (default labels) before config has loaded.
+  const visibleStages: { stage: (typeof ALL_STAGES)[number]; label: string }[] =
+    stageConfigs.length > 0
+      ? stageConfigs.filter((s) => s.isActive).map((s) => ({ stage: s.stage, label: s.label }))
+      : ALL_STAGES.map((s) => ({ stage: s, label: s.replace(/_/g, " ") }));
+
+  // Every stage remains selectable in the per-lead dropdown (even hidden
+  // ones) so a lead already on a hidden stage can still be moved off it.
+  const selectableStages: { stage: (typeof ALL_STAGES)[number]; label: string }[] =
+    stageConfigs.length > 0
+      ? stageConfigs.slice().sort((a, b) => a.order - b.order).map((s) => ({ stage: s.stage, label: s.label }))
+      : ALL_STAGES.map((s) => ({ stage: s, label: s.replace(/_/g, " ") }));
 
   async function createLead(e: React.FormEvent) {
     e.preventDefault();
@@ -117,11 +149,11 @@ export default function LeadsPage() {
         <p className="mt-8 text-sm text-slate-500">Loading…</p>
       ) : (
         <div className="mt-6 flex gap-4 overflow-x-auto pb-4">
-          {STAGES.map((stage) => (
+          {visibleStages.map(({ stage, label }) => (
             <div key={stage} className="w-64 flex-shrink-0">
               <div className="mb-2 flex items-center justify-between px-1">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {stage.replace(/_/g, " ")}
+                  {label}
                 </h3>
                 <span className="text-xs text-slate-400">
                   {leads.filter((l) => l.stage === stage).length}
@@ -141,9 +173,9 @@ export default function LeadsPage() {
                         onChange={(e) => changeStage(lead.id, e.target.value)}
                         className="mt-2 w-full rounded border border-slate-200 bg-slate-50 px-1 py-1 text-xs"
                       >
-                        {STAGES.map((s) => (
+                        {selectableStages.map(({ stage: s, label: l }) => (
                           <option key={s} value={s}>
-                            {s.replace(/_/g, " ")}
+                            {l}
                           </option>
                         ))}
                       </select>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Users, UserSquare2, ClipboardList,
   CheckSquare, LogOut, Handshake, Receipt, ShieldCheck, ScrollText,
-  Landmark, SearchCheck, Settings, Crown, Calculator, Plug,
+  Landmark, SearchCheck, Settings, Crown, Calculator, Plug, SlidersHorizontal,
 } from "lucide-react";
 import clsx from "clsx";
 import { NotificationBell } from "./NotificationBell";
@@ -21,6 +21,7 @@ const nav = [
   { href: "/dashboard/course-search", label: "Course Search", icon: SearchCheck, roles: ["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"] },
   { href: "/dashboard/partners", label: "Partners", icon: Handshake, roles: ["OWNER", "ADMIN", "COUNSELOR"] },
   { href: "/dashboard/integrations", label: "Integrations", icon: Plug, roles: ["OWNER", "ADMIN"] },
+  { href: "/dashboard/settings/customize", label: "Customize", icon: SlidersHorizontal, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/billing", label: "Billing", icon: Receipt, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/accounting", label: "Accounting", icon: Calculator, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/team", label: "Team", icon: ShieldCheck, roles: ["OWNER", "ADMIN"] },
