@@ -1,8 +1,9 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, History, CheckSquare, X } from "lucide-react";
+import { ChevronDown, ChevronUp, History, CheckSquare, Plus, X } from "lucide-react";
 import { STAGE_VALUES, STAGE_LABELS, type ApplicationStageValue } from "@/lib/application-stages";
+import { PersonCombobox } from "@/components/ui/PersonCombobox";
 
 type Application = {
   id: string;
@@ -24,6 +25,8 @@ type StageLog = {
 };
 
 type DocOfficer = { id: string; name: string; role: string; isActive: boolean };
+type StudentOption = { id: string; fullName: string };
+type Destination = { id: string; university: string; course: string; country: string; intake: string };
 
 const STATUSES = [
   "DRAFT", "SUBMITTED", "UNDER_REVIEW", "OFFER_CONDITIONAL", "OFFER_UNCONDITIONAL",
@@ -41,8 +44,17 @@ function stageBadge(a: Application) {
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [docOfficers, setDocOfficers] = useState<DocOfficer[]>([]);
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
+
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newStudentId, setNewStudentId] = useState("");
+  const [newDestinationId, setNewDestinationId] = useState("");
+  const [newDocOfficerId, setNewDocOfficerId] = useState("");
+  const [creatingApplication, setCreatingApplication] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [stageForm, setStageForm] = useState<{ stage: ApplicationStageValue; otherLabel: string; note: string }>({
@@ -64,17 +76,23 @@ export default function ApplicationsPage() {
 
   async function load() {
     setLoading(true);
-    const [appsRes, meRes, teamRes] = await Promise.all([
+    const [appsRes, meRes, teamRes, studentsRes, destRes] = await Promise.all([
       fetch("/api/applications"),
       fetch("/api/auth/me"),
       fetch("/api/team"),
+      fetch("/api/students"),
+      fetch("/api/destinations"),
     ]);
     const appsData = await appsRes.json();
     const meData = await meRes.json();
     const teamData = await teamRes.json();
+    const studentsData = await studentsRes.json();
+    const destData = await destRes.json();
     setApplications(appsData.applications ?? []);
     setRole(meData.user?.role ?? null);
     setDocOfficers((teamData.staff ?? []).filter((u: DocOfficer) => u.role === "DOCUMENTATION_OFFICER" && u.isActive));
+    setStudents(studentsData.students ?? []);
+    setDestinations(destData.destinations ?? []);
     setLoading(false);
   }
 
@@ -182,7 +200,37 @@ export default function ApplicationsPage() {
     setBulkDocOfficerId("");
   }
 
+  async function createApplication(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newStudentId || !newDestinationId) return;
+    setCreatingApplication(true);
+    setCreateError(null);
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: newStudentId,
+          destinationId: newDestinationId,
+          assignedDocOfficerId: newDocOfficerId || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not create application");
+      setShowNewForm(false);
+      setNewStudentId("");
+      setNewDestinationId("");
+      setNewDocOfficerId("");
+      load();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Could not create application");
+    } finally {
+      setCreatingApplication(false);
+    }
+  }
+
   const canManageStage = role != null && STAGE_MANAGER_ROLES.includes(role);
+  const canCreate = role != null && ["OWNER", "ADMIN", "COUNSELOR", "DOCUMENTATION_OFFICER"].includes(role);
 
   return (
     <div>
@@ -191,15 +239,87 @@ export default function ApplicationsPage() {
           <h1 className="text-2xl font-semibold">Applications</h1>
           <p className="mt-1 text-sm text-slate-500">{applications.length} applications in flight</p>
         </div>
-        <button
-          onClick={toggleSelectMode}
-          className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium ${
-            selectMode ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-300 bg-white hover:bg-slate-50"
-          }`}
-        >
-          <CheckSquare className="h-4 w-4" /> {selectMode ? "Cancel select" : "Select"}
-        </button>
+        <div className="flex gap-2">
+          {canCreate && (
+            <button
+              onClick={() => {
+                setShowNewForm((v) => !v);
+                setCreateError(null);
+              }}
+              className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              <Plus className="h-4 w-4" /> New Application
+            </button>
+          )}
+          <button
+            onClick={toggleSelectMode}
+            className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium ${
+              selectMode ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-300 bg-white hover:bg-slate-50"
+            }`}
+          >
+            <CheckSquare className="h-4 w-4" /> {selectMode ? "Cancel select" : "Select"}
+          </button>
+        </div>
       </div>
+
+      {showNewForm && (
+        <form onSubmit={createApplication} className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <PersonCombobox
+              options={students.map((s) => ({ id: s.id, label: s.fullName }))}
+              value={newStudentId}
+              onChange={setNewStudentId}
+              placeholder="Search student…"
+            />
+            <select
+              required
+              value={newDestinationId}
+              onChange={(e) => setNewDestinationId(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="">Select a destination / course…</option>
+              {destinations.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.university} — {d.course} ({d.country}, {d.intake})
+                </option>
+              ))}
+            </select>
+            <select
+              value={newDocOfficerId}
+              onChange={(e) => setNewDocOfficerId(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="">Assign to Documentation Officer (optional)…</option>
+              {docOfficers.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {destinations.length === 0 && (
+            <p className="text-xs text-slate-500">No destinations/courses set up yet. Add one under Institutions first.</p>
+          )}
+          {createError && <p className="text-xs text-red-600">{createError}</p>}
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={creatingApplication || !newStudentId || !newDestinationId}
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {creatingApplication ? "Creating…" : "Create application"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowNewForm(false)}
+              disabled={creatingApplication}
+              className="text-sm font-medium text-slate-500 hover:text-slate-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {selectMode && selected.size > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
