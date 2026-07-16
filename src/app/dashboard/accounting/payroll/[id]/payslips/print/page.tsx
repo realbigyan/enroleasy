@@ -89,7 +89,7 @@ export default async function PayslipPrintPage({
             <div>
               {letterheadLogo && (
                 // eslint-disable-next-line @next/next/no-img-element -- external Cloudinary URL, not a local asset
-                <img src={letterheadLogo} alt={letterheadName} className="h-16 w-16 rounded object-contain" />
+                <img src={letterheadLogo} alt={letterheadName} className="h-16 w-auto max-w-xs object-contain" />
               )}
               <p className={`${letterheadLogo ? "mt-2" : ""} text-lg font-semibold`}>{letterheadName}</p>
               {letterheadAddress && <p className="text-sm text-slate-500">{letterheadAddress}</p>}

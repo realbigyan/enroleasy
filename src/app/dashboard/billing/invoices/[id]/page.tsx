@@ -52,7 +52,7 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
           <div>
             {invoice.invoicer.logoUrl && (
               // eslint-disable-next-line @next/next/no-img-element -- external Cloudinary URL, not a local asset
-              <img src={invoice.invoicer.logoUrl} alt={invoice.invoicer.name} className="h-32 w-32 rounded object-contain" />
+              <img src={invoice.invoicer.logoUrl} alt={invoice.invoicer.name} className="h-32 w-auto max-w-xs object-contain" />
             )}
             <p className={`${invoice.invoicer.logoUrl ? "mt-3" : ""} text-lg font-semibold`}>{invoice.invoicer.name}</p>
             {invoice.invoicer.addressLine1 && <p className="text-sm text-slate-500">{invoice.invoicer.addressLine1}</p>}
