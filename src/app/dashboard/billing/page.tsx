@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { PersonCombobox } from "@/components/ui/PersonCombobox";
+import { TDS_RULES } from "@/lib/accounting/tds-rates";
 
 type Invoicer = { id: string; name: string; invoicePrefix: string; isDefault: boolean; isActive: boolean; taxIdType: "PAN" | "VAT" | null };
 type Invoice = {
@@ -20,15 +21,23 @@ type Invoice = {
   partner: { name: string } | null;
 };
 
-// `rate` is used for PAN invoices (client types the per-unit taxable rate,
-// tax has nothing to add on top). `grossAmount` is used for VAT invoices
-// (client types what the customer actually pays for that line, and the
-// taxable rate/amount is worked backward from it — see `computedLineItems`).
-type LineItemForm = { hsCode: string; description: string; quantity: string; rate: string; grossAmount: string };
+// `rate` is used for a plain PAN invoice (client types the per-unit taxable
+// rate directly, nothing to add or back out). `grossAmount` is used for VAT
+// invoices (client types what the customer actually pays, VAT-inclusive,
+// and the taxable rate is worked backward from it). `netAmount` is used for
+// PAN commission invoices billed to a partner (client types what actually
+// lands in the bank after the partner withholds TDS, and the taxable/
+// invoiced rate is worked backward from that) — see `computedLineItems`.
+type LineItemForm = { hsCode: string; description: string; quantity: string; rate: string; grossAmount: string; netAmount: string };
 
-const emptyLineItem = (): LineItemForm => ({ hsCode: "", description: "", quantity: "1", rate: "", grossAmount: "" });
+const emptyLineItem = (): LineItemForm => ({ hsCode: "", description: "", quantity: "1", rate: "", grossAmount: "", netAmount: "" });
 
 const VAT_RATE = 0.13;
+// The rate a partner withholds (TDS) before paying out commission on a PAN
+// bill — Income Tax Act 2058, Section 88(1) general clause ("commission").
+// Kept in sync with the single source of truth in tds-rates.ts rather than
+// hardcoded here; falls back to 15 if that rule is ever renamed/removed.
+const COMMISSION_TDS_RATE = (TDS_RULES.find((r) => r.key === "COMMISSION")?.rate ?? 15) / 100;
 
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -84,30 +93,51 @@ export default function BillingPage() {
   const defaultInvoicer = invoicers.find((ic) => ic.isDefault) ?? invoicers[0];
   const canChargeVat = defaultInvoicer?.taxIdType === "VAT";
 
-  // For a VAT invoice, each row's "Amount" is what the client actually pays
-  // (gross, VAT-inclusive) — the taxable rate is derived backward from it
-  // (gross / 1.13), rather than typed in and taxed on top. For a PAN
-  // invoice there's no VAT to back out, so Rate x Qty behaves as before.
+  // Billing a partner for commission on a PAN invoice is the one case where
+  // the partner (not us) withholds tax before paying — so "what we'll
+  // actually receive" and "what we invoice as taxable commission" are two
+  // different numbers, and it's the net figure landing in the bank that's
+  // known first (e.g. a bank statement line).
+  const isPartnerCommissionPan = !form.includeVat && form.billedToType === "PARTNER" && form.feeType === "COMMISSION";
+
+  // Each row's amount input means something different depending on mode:
+  //   - VAT invoice: "Amount" is what the client pays (gross, VAT-inclusive)
+  //     -> taxable rate = gross / 1.13.
+  //   - PAN commission billed to a partner: "Amount" is what we'll actually
+  //     receive after the partner withholds 15% TDS -> taxable rate =
+  //     net / (1 - 0.15) = net / 0.85.
+  //   - Plain PAN invoice: "Rate" is the taxable rate directly, nothing to
+  //     back out.
   const computedLineItems = lineItems.map((li) => {
     const quantity = Number(li.quantity) || 0;
     if (form.includeVat) {
       const gross = Number(li.grossAmount) || 0;
       const taxableAmount = gross / (1 + VAT_RATE);
       const rate = quantity > 0 ? taxableAmount / quantity : 0;
-      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, gross };
+      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, settled: gross };
+    }
+    if (isPartnerCommissionPan) {
+      const net = Number(li.netAmount) || 0;
+      const taxableAmount = net / (1 - COMMISSION_TDS_RATE);
+      const rate = quantity > 0 ? taxableAmount / quantity : 0;
+      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, settled: net };
     }
     const rate = Number(li.rate) || 0;
     const taxableAmount = quantity * rate;
-    return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, gross: taxableAmount };
+    return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, settled: taxableAmount };
   });
   const validLineItems = computedLineItems.filter((li) => li.description && li.quantity > 0);
   const subtotal = validLineItems.reduce((sum, li) => sum + li.taxableAmount, 0);
-  // Grand total is always exactly the sum of what was typed as "client
-  // pays" (or, for PAN, the taxable subtotal itself) — never re-derived by
-  // multiplying subtotal x 13% again, so it can't drift by a paisa from
-  // rounding the same figure twice.
-  const grandTotal = validLineItems.reduce((sum, li) => sum + li.gross, 0);
-  const vatAmount = form.includeVat ? grandTotal - subtotal : 0;
+  // "settled" totals what money actually changes hands for the line — the
+  // client's payment on a VAT invoice, our net receipt on a PAN commission
+  // invoice, or (for a plain PAN invoice) the taxable amount itself. Grand
+  // total below is always exactly the sum of what was typed, never
+  // re-derived by multiplying the subtotal by a rate again, so it can't
+  // drift by a paisa from rounding the same figure twice.
+  const settledTotal = validLineItems.reduce((sum, li) => sum + li.settled, 0);
+  const grandTotal = form.includeVat ? settledTotal : subtotal;
+  const vatAmount = form.includeVat ? settledTotal - subtotal : 0;
+  const tdsWithheld = isPartnerCommissionPan ? subtotal - settledTotal : 0;
 
   function updateLineItem(index: number, patch: Partial<LineItemForm>) {
     setLineItems((prev) => prev.map((li, i) => (i === index ? { ...li, ...patch } : li)));
@@ -270,6 +300,11 @@ export default function BillingPage() {
                   <span className="col-span-2">Amount (client pays)</span>
                   <span className="col-span-2">Taxable (auto)</span>
                 </>
+              ) : isPartnerCommissionPan ? (
+                <>
+                  <span className="col-span-2">Net received (after 15% TDS)</span>
+                  <span className="col-span-2">Taxable (auto)</span>
+                </>
               ) : (
                 <>
                   <span className="col-span-2">Rate</span>
@@ -299,6 +334,15 @@ export default function BillingPage() {
                         {((Number(li.grossAmount) || 0) / (1 + VAT_RATE)).toFixed(2)}
                       </span>
                     </>
+                  ) : isPartnerCommissionPan ? (
+                    <>
+                      <input required type="number" step="0.01" min="0" placeholder="e.g. 3300" value={li.netAmount}
+                        onChange={(e) => updateLineItem(i, { netAmount: e.target.value })}
+                        className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                      <span className="col-span-2 self-center text-sm text-slate-500">
+                        {((Number(li.netAmount) || 0) / (1 - COMMISSION_TDS_RATE)).toFixed(2)}
+                      </span>
+                    </>
                   ) : (
                     <>
                       <input required type="number" step="0.01" min="0" value={li.rate}
@@ -321,6 +365,11 @@ export default function BillingPage() {
             {form.includeVat && (
               <p className="mt-2 text-xs text-slate-400">
                 Type what the client actually pays for each line — the taxable amount and 13% VAT are worked out automatically.
+              </p>
+            )}
+            {isPartnerCommissionPan && (
+              <p className="mt-2 text-xs text-slate-400">
+                Type what actually lands in the bank per booking (net of the partner&apos;s 15% TDS) — the taxable commission to invoice is worked out automatically.
               </p>
             )}
           </div>
@@ -360,6 +409,12 @@ export default function BillingPage() {
                 <>
                   <p className="text-slate-500">13% VAT: <span className="font-medium text-slate-800">{vatAmount.toFixed(2)}</span></p>
                   <p className="text-slate-700">Client pays: <span className="font-semibold">{grandTotal.toFixed(2)}</span></p>
+                </>
+              )}
+              {isPartnerCommissionPan && (
+                <>
+                  <p className="text-slate-500">15% TDS withheld: <span className="font-medium text-slate-800">{tdsWithheld.toFixed(2)}</span></p>
+                  <p className="text-slate-700">We receive (net): <span className="font-semibold">{settledTotal.toFixed(2)}</span></p>
                 </>
               )}
             </div>
