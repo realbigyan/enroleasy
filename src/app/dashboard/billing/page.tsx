@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { PersonCombobox } from "@/components/ui/PersonCombobox";
 
-type Invoicer = { id: string; name: string; invoicePrefix: string; isDefault: boolean; isActive: boolean };
+type Invoicer = { id: string; name: string; invoicePrefix: string; isDefault: boolean; isActive: boolean; taxIdType: "PAN" | "VAT" | null };
 type Invoice = {
   id: string;
   invoiceNumber: string;
@@ -72,6 +72,13 @@ export default function BillingPage() {
   const collected = invoices.filter((i) => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
   const outstanding = invoices.filter((i) => i.status === "UNPAID").reduce((sum, i) => sum + i.amount, 0);
 
+  // The New Invoice form has no invoicer picker — /api/invoices always bills
+  // from whichever invoicer has isDefault: true. A VAT invoice can only be
+  // issued if that invoicer is itself VAT-registered; otherwise every
+  // invoice it issues must be a PAN invoice.
+  const defaultInvoicer = invoicers.find((ic) => ic.isDefault) ?? invoicers[0];
+  const canChargeVat = defaultInvoicer?.taxIdType === "VAT";
+
   const validLineItems = lineItems
     .map((li) => ({
       hsCode: li.hsCode.trim() || undefined,
@@ -109,7 +116,7 @@ export default function BillingPage() {
         partnerId: form.billedToType === "PARTNER" ? form.partnerId : undefined,
         feeType: form.feeType,
         lineItems: validLineItems,
-        includeVat: form.includeVat,
+        includeVat: canChargeVat && form.includeVat,
         currency: form.currency,
         markPaid: form.documentKind === "RECEIPT",
       }),
@@ -286,12 +293,21 @@ export default function BillingPage() {
                 </button>
                 <button
                   type="button"
+                  disabled={!canChargeVat}
                   onClick={() => setForm({ ...form, includeVat: true })}
-                  className={`px-3 py-1.5 font-medium ${form.includeVat ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                  title={canChargeVat ? undefined : `${defaultInvoicer?.name ?? "This invoicer"} is PAN-registered only — VAT can't be charged until it's VAT-registered.`}
+                  className={`px-3 py-1.5 font-medium ${
+                    form.includeVat && canChargeVat ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
+                  }`}
                 >
                   VAT Invoice (+13%)
                 </button>
               </div>
+              {!canChargeVat && defaultInvoicer && (
+                <p className="mt-1 text-xs text-slate-400">
+                  {defaultInvoicer.name} is PAN-registered — invoices issue as PAN only.
+                </p>
+              )}
             </div>
             <div className="text-right text-sm">
               <p className="text-slate-500">Taxable amount: <span className="font-medium text-slate-800">{subtotal.toFixed(2)}</span></p>

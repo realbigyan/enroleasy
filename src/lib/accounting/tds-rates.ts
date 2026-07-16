@@ -1,8 +1,17 @@
 // Nepal TDS (Tax Deducted at Source) rates under the Income Tax Act 2058
-// (2002), Sections 87-92, as applicable for FY 2082/83. Rates are set by
-// the annual Finance Act/Budget and can change each Nepali fiscal year —
-// review and update this list every Shrawan (~mid-July) against the new
-// Finance Act before relying on it for a new fiscal year.
+// (2002), Section 88 (withholding on rent/royalty/service charge/commission
+// etc.). Verified 2026-07-16 against the FY 2083/84 (2026/27) Finance Act
+// rate schedule — every rate below is unchanged from FY 2082/83, notably:
+//   - Section 88(1) general clause: "commission" (and rent/royalty/service
+//     charge/sales bonus) is withheld at 15% — confirms COMMISSION below.
+//   - Section 88(1) proviso 4: service charge paid to a VAT-registered
+//     resident service provider is withheld at only 1.5% instead — this is
+//     why issuing a VAT invoice (when the issuer is actually VAT-registered)
+//     lowers the payer's withholding vs. a PAN-only bill.
+// Source: https://www.saca.com.np/tds-rates-nepal-fy-2083-84/ (published
+// Jun 2026, FY 2083/84). Rates are set by the annual Finance Act/Budget and
+// can change each Nepali fiscal year — re-verify every Shrawan (~mid-July)
+// against the new Finance Act before relying on this for a new fiscal year.
 export type TdsRule = { key: string; label: string; rate: number; note?: string };
 
 export const TDS_RULES: TdsRule[] = [
