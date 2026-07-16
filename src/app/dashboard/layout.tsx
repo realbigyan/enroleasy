@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DashboardNav } from "@/components/DashboardNav";
+import { DashboardTopBar } from "@/components/DashboardTopBar";
 import { PendingApprovalScreen } from "@/components/PendingApprovalScreen";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -33,12 +34,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex min-h-screen flex-1">
       <DashboardNav
         orgName={org.name}
-        orgLogoUrl={org.logoUrl}
         userName={session.name}
         role={session.role}
         isSuperAdmin={isSuperAdmin}
       />
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-8">{children}</main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <DashboardTopBar orgName={org.name} orgLogoUrl={org.logoUrl} />
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-8">{children}</main>
+      </div>
     </div>
   );
 }
