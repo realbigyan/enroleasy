@@ -12,13 +12,13 @@ export function DashboardTopBar({ orgName, orgLogoUrl }: { orgName: string; orgL
         {orgLogoUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element -- external Cloudinary URL, not a local asset */}
-            <img src={orgLogoUrl} alt={orgName} className="h-10 w-10 shrink-0 rounded object-contain" />
-            <p className="truncate text-base font-medium text-slate-900">{orgName}</p>
+            <img src={orgLogoUrl} alt={orgName} className="h-16 w-16 shrink-0 rounded object-contain" />
+            <p className="truncate text-2xl font-bold text-slate-900">{orgName}</p>
           </>
         ) : (
           <>
-            <LogoMark className="h-8 w-8 shrink-0" />
-            <p className="text-base font-medium text-slate-900">EnrolEasy</p>
+            <LogoMark className="h-12 w-12 shrink-0" />
+            <p className="text-2xl font-bold text-slate-900">EnrolEasy</p>
           </>
         )}
       </div>
