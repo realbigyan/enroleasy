@@ -77,8 +77,10 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
           <p className="mt-1 font-medium">{invoice.student?.fullName ?? invoice.partner?.name ?? "—"}</p>
           {invoice.billedToType === "PARTNER" ? (
             <>
-              {invoice.partner?.address && (
-                <p className="text-sm text-slate-500">Address: {invoice.partner.address}</p>
+              {(invoice.partner?.addressLine1 || invoice.partner?.addressLine2 || invoice.partner?.addressLine3) && (
+                <p className="text-sm text-slate-500">
+                  {[invoice.partner?.addressLine1, invoice.partner?.addressLine2, invoice.partner?.addressLine3].filter(Boolean).join(", ")}
+                </p>
               )}
               {invoice.partner?.panNumber && (
                 <p className="text-sm text-slate-500">

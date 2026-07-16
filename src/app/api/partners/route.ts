@@ -4,14 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError } from "@/lib/api-guard";
 import { logAudit } from "@/lib/audit";
 
+// Blank strings from the create form arrive as "" rather than omitted/null —
+// without normalizing them first, contactEmail's .email() check rejects ""
+// as an invalid address and creation fails even when the field was just
+// left empty.
+const blankToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
+
 const createSchema = z.object({
   name: z.string().min(2),
   type: z.enum(["REFERRAL", "B2B_APPLICATION", "EXAM_BODY"]).default("REFERRAL"),
-  contactEmail: z.string().email().optional().nullable(),
-  contactPhone: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
+  contactEmail: z.preprocess(blankToNull, z.string().email().nullable().optional()),
+  contactPhone: z.preprocess(blankToNull, z.string().nullable().optional()),
+  addressLine1: z.preprocess(blankToNull, z.string().nullable().optional()),
+  addressLine2: z.preprocess(blankToNull, z.string().nullable().optional()),
+  addressLine3: z.preprocess(blankToNull, z.string().nullable().optional()),
   taxIdType: z.enum(["PAN", "VAT"]).optional().nullable(),
-  panNumber: z.string().optional().nullable(),
+  panNumber: z.preprocess(blankToNull, z.string().nullable().optional()),
   commissionPct: z.number().optional().nullable(),
 });
 

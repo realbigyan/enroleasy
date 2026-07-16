@@ -308,7 +308,9 @@ model Partner {
   type           PartnerType  @default(REFERRAL)
   contactEmail   String?
   contactPhone   String?
-  address        String?
+  addressLine1   String?
+  addressLine2   String?
+  addressLine3   String?
   // Partner's own tax registration — printed under "M/S" on invoices billed
   // to them (e.g. "VAT no: 604251480"). Independent of Invoice.includeVat,
   // which is a per-invoice choice about whether *this* transaction is taxed;

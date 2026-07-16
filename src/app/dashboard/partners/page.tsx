@@ -9,7 +9,9 @@ type Partner = {
   type: "REFERRAL" | "B2B_APPLICATION" | "EXAM_BODY";
   contactEmail: string | null;
   contactPhone: string | null;
-  address: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  addressLine3: string | null;
   taxIdType: "PAN" | "VAT" | null;
   panNumber: string | null;
   isActive: boolean;
@@ -27,7 +29,9 @@ export default function PartnersPage() {
     type: "REFERRAL" as (typeof TYPES)[number],
     contactEmail: "",
     contactPhone: "",
-    address: "",
+    addressLine1: "",
+    addressLine2: "",
+    addressLine3: "",
     taxIdType: "" as "" | "PAN" | "VAT",
     panNumber: "",
   });
@@ -50,9 +54,28 @@ export default function PartnersPage() {
     await fetch("/api/partners", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, taxIdType: form.taxIdType || null }),
+      body: JSON.stringify({
+        ...form,
+        contactEmail: form.contactEmail.trim() || null,
+        contactPhone: form.contactPhone.trim() || null,
+        addressLine1: form.addressLine1.trim() || null,
+        addressLine2: form.addressLine2.trim() || null,
+        addressLine3: form.addressLine3.trim() || null,
+        taxIdType: form.taxIdType || null,
+        panNumber: form.panNumber.trim() || null,
+      }),
     });
-    setForm({ name: "", type: "REFERRAL", contactEmail: "", contactPhone: "", address: "", taxIdType: "", panNumber: "" });
+    setForm({
+      name: "",
+      type: "REFERRAL",
+      contactEmail: "",
+      contactPhone: "",
+      addressLine1: "",
+      addressLine2: "",
+      addressLine3: "",
+      taxIdType: "",
+      panNumber: "",
+    });
     setShowForm(false);
     load();
   }
@@ -89,8 +112,14 @@ export default function PartnersPage() {
           <input placeholder="Contact phone" value={form.contactPhone}
             onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          <input placeholder="Address" value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
+          <input placeholder="Address line 1" value={form.addressLine1}
+            onChange={(e) => setForm({ ...form, addressLine1: e.target.value })}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
+          <input placeholder="Address line 2 (optional)" value={form.addressLine2}
+            onChange={(e) => setForm({ ...form, addressLine2: e.target.value })}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
+          <input placeholder="Address line 3 (optional)" value={form.addressLine3}
+            onChange={(e) => setForm({ ...form, addressLine3: e.target.value })}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
           <select value={form.taxIdType} onChange={(e) => setForm({ ...form, taxIdType: e.target.value as "" | "PAN" | "VAT" })}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm">

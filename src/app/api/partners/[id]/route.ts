@@ -4,14 +4,19 @@ import { prisma } from "@/lib/prisma";
 import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { logAudit } from "@/lib/audit";
 
+// See create route for why blank strings need normalizing before validation.
+const blankToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
+
 const updateSchema = z.object({
   name: z.string().min(2).optional(),
   isActive: z.boolean().optional(),
-  contactEmail: z.string().email().optional().nullable(),
-  contactPhone: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
+  contactEmail: z.preprocess(blankToNull, z.string().email().nullable().optional()),
+  contactPhone: z.preprocess(blankToNull, z.string().nullable().optional()),
+  addressLine1: z.preprocess(blankToNull, z.string().nullable().optional()),
+  addressLine2: z.preprocess(blankToNull, z.string().nullable().optional()),
+  addressLine3: z.preprocess(blankToNull, z.string().nullable().optional()),
   taxIdType: z.enum(["PAN", "VAT"]).optional().nullable(),
-  panNumber: z.string().optional().nullable(),
+  panNumber: z.preprocess(blankToNull, z.string().nullable().optional()),
   commissionPct: z.number().optional().nullable(),
 });
 
