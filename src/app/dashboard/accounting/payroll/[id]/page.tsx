@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Printer, Download } from "lucide-react";
 
 type Account = { id: string; code: string; name: string; type: string };
 type Employee = {
@@ -63,6 +63,14 @@ export default function EmployeeDetailPage() {
   const [fiscalYear, setFiscalYear] = useState("");
   const [month, setMonth] = useState(4);
   const [paymentAccountId, setPaymentAccountId] = useState("");
+
+  // Download-range picker: prints every payslip from one fiscal-year+month
+  // to another (inclusive) as a single print/PDF job via the print route.
+  const [showRangeForm, setShowRangeForm] = useState(false);
+  const [fromFY, setFromFY] = useState("");
+  const [fromMonth, setFromMonth] = useState(4);
+  const [toFY, setToFY] = useState("");
+  const [toMonth, setToMonth] = useState(4);
 
   // Edit-employee form state
   const [showEditForm, setShowEditForm] = useState(false);
@@ -221,6 +229,10 @@ export default function EmployeeDetailPage() {
             className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
             <Trash2 className="h-3.5 w-3.5" /> Delete
           </button>
+          <button onClick={() => setShowRangeForm((v) => !v)}
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+            <Download className="h-3.5 w-3.5" /> Download Payslips
+          </button>
           <button onClick={() => setShowForm((v) => !v)}
             className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
             <Plus className="h-4 w-4" /> Generate Payslip
@@ -264,6 +276,46 @@ export default function EmployeeDetailPage() {
             </button>
           </div>
         </form>
+      )}
+
+      {showRangeForm && (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+          <p className="text-sm font-medium text-slate-700">Download payslips from — to</p>
+          <p className="mt-1 text-xs text-slate-500">Pick a fiscal-year + month range (inclusive). Opens a print view with one payslip per page — use &quot;Print / Save as PDF&quot; there to download.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-4">
+            <input placeholder="From fiscal year (e.g. 2082/83)" value={fromFY} onChange={(e) => setFromFY(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <select value={fromMonth} onChange={(e) => setFromMonth(Number(e.target.value))}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+              {NEPALI_MONTHS_FISCAL_ORDER.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <input placeholder="To fiscal year (e.g. 2082/83)" value={toFY} onChange={(e) => setToFY(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <select value={toMonth} onChange={(e) => setToMonth(Number(e.target.value))}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+              {NEPALI_MONTHS_FISCAL_ORDER.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+          <a
+            href={
+              fromFY && toFY
+                ? `/dashboard/accounting/payroll/${params.id}/payslips/print?fromFY=${encodeURIComponent(fromFY)}&fromMonth=${fromMonth}&toFY=${encodeURIComponent(toFY)}&toMonth=${toMonth}`
+                : undefined
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={!fromFY || !toFY}
+            className={`mt-3 inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium text-white ${
+              fromFY && toFY ? "bg-indigo-600 hover:bg-indigo-700" : "pointer-events-none bg-slate-300"
+            }`}
+          >
+            <Printer className="h-3.5 w-3.5" /> Open print view
+          </a>
+        </div>
       )}
 
       {showForm && (
@@ -321,9 +373,20 @@ export default function EmployeeDetailPage() {
                       className="h-4 w-4 rounded border-slate-300" />
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <button onClick={() => deletePayslip(p.id)} className="text-slate-400 hover:text-red-600">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-3">
+                      <a
+                        href={`/dashboard/accounting/payroll/${params.id}/payslips/print?ids=${p.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Print / download this payslip"
+                        className="text-slate-400 hover:text-indigo-600"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </a>
+                      <button onClick={() => deletePayslip(p.id)} className="text-slate-400 hover:text-red-600">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
