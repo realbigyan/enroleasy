@@ -5,6 +5,13 @@ import { requireSession, handleApiError, ApiError } from "@/lib/api-guard";
 import { postInvoiceAccrual, postInvoicePayment } from "@/lib/accounting/invoice-posting";
 import { logAudit } from "@/lib/audit";
 
+const lineItemSchema = z.object({
+  hsCode: z.string().optional().nullable(),
+  description: z.string().min(1),
+  quantity: z.number().positive().default(1),
+  rate: z.number().nonnegative(),
+});
+
 const createSchema = z.object({
   invoicerId: z.string().optional(),
   billedToType: z.enum(["STUDENT", "PARTNER"]),
@@ -12,13 +19,21 @@ const createSchema = z.object({
   partnerId: z.string().optional().nullable(),
   feeType: z.enum(["MANUAL", "MEMBERSHIP", "COMMISSION"]).default("MANUAL"),
   description: z.string().optional().nullable(),
-  amount: z.number().positive(),
+  // Either a flat amount, or itemized lineItems (S.N / H.S. Code / Description /
+  // Qty / Rate) whose quantity*rate sum becomes the taxable amount — lineItems
+  // takes precedence when provided and non-empty.
+  amount: z.number().positive().optional(),
+  lineItems: z.array(lineItemSchema).optional(),
+  includeVat: z.boolean().optional().default(false),
   currency: z.string().default("USD"),
   dueDate: z.string().datetime().optional().nullable(),
   // A receipt is just an invoice created already-paid: no dunning needed, no
   // bank/QR shown on the printed document, numbered with the invoicer's
   // receiptPrefix instead of invoicePrefix (falls back to invoicePrefix if unset).
   markPaid: z.boolean().optional().default(false),
+}).refine((v) => v.amount != null || (v.lineItems && v.lineItems.length > 0), {
+  message: "Provide either an amount or at least one line item",
+  path: ["amount"],
 });
 
 async function generateInvoiceNumber(organizationId: string, invoicerId: string, prefix: string) {
@@ -65,6 +80,11 @@ export async function POST(req: NextRequest) {
     const prefix = body.markPaid ? invoicer.receiptPrefix ?? invoicer.invoicePrefix : invoicer.invoicePrefix;
     const invoiceNumber = await generateInvoiceNumber(session.organizationId, invoicer.id, prefix);
 
+    const lineItems = body.lineItems ?? [];
+    const amount = lineItems.length > 0
+      ? lineItems.reduce((sum, li) => sum + li.quantity * li.rate, 0)
+      : body.amount!;
+
     const invoice = await prisma.invoice.create({
       data: {
         organizationId: session.organizationId,
@@ -75,13 +95,26 @@ export async function POST(req: NextRequest) {
         partnerId: body.billedToType === "PARTNER" ? body.partnerId : null,
         feeType: body.feeType,
         description: body.description,
-        amount: body.amount,
+        amount,
+        includeVat: body.includeVat,
         currency: body.currency,
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         status: body.markPaid ? "PAID" : "UNPAID",
         paidAt: body.markPaid ? new Date() : null,
+        lineItems: lineItems.length > 0
+          ? {
+              create: lineItems.map((li, i) => ({
+                hsCode: li.hsCode || null,
+                description: li.description,
+                quantity: li.quantity,
+                rate: li.rate,
+                amount: li.quantity * li.rate,
+                order: i,
+              })),
+            }
+          : undefined,
       },
-      include: { invoicer: true, student: true, partner: true },
+      include: { invoicer: true, student: true, partner: true, lineItems: { orderBy: { order: "asc" } } },
     });
 
     // Auto-post to the accounting ledger (NPR invoices only — see

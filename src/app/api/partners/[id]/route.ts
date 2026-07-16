@@ -7,6 +7,10 @@ import { logAudit } from "@/lib/audit";
 const updateSchema = z.object({
   name: z.string().min(2).optional(),
   isActive: z.boolean().optional(),
+  contactEmail: z.string().email().optional().nullable(),
+  contactPhone: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  panNumber: z.string().optional().nullable(),
   commissionPct: z.number().optional().nullable(),
 });
 

@@ -9,6 +9,8 @@ type Partner = {
   type: "REFERRAL" | "B2B_APPLICATION" | "EXAM_BODY";
   contactEmail: string | null;
   contactPhone: string | null;
+  address: string | null;
+  panNumber: string | null;
   isActive: boolean;
   _count: { referredLeads: number; referredStudents: number };
 };
@@ -19,7 +21,14 @@ export default function PartnersPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", type: "REFERRAL" as (typeof TYPES)[number], contactEmail: "", contactPhone: "" });
+  const [form, setForm] = useState({
+    name: "",
+    type: "REFERRAL" as (typeof TYPES)[number],
+    contactEmail: "",
+    contactPhone: "",
+    address: "",
+    panNumber: "",
+  });
 
   async function load() {
     setLoading(true);
@@ -41,7 +50,7 @@ export default function PartnersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-    setForm({ name: "", type: "REFERRAL", contactEmail: "", contactPhone: "" });
+    setForm({ name: "", type: "REFERRAL", contactEmail: "", contactPhone: "", address: "", panNumber: "" });
     setShowForm(false);
     load();
   }
@@ -78,6 +87,12 @@ export default function PartnersPage() {
           <input placeholder="Contact phone" value={form.contactPhone}
             onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          <input placeholder="Address" value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
+          <input placeholder="PAN/VAT number" value={form.panNumber}
+            onChange={(e) => setForm({ ...form, panNumber: e.target.value })}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
           <button type="submit" className="sm:col-span-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
             Add partner
           </button>
@@ -94,6 +109,7 @@ export default function PartnersPage() {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">PAN/VAT</th>
                 <th className="px-4 py-3">Referred / Converted</th>
               </tr>
             </thead>
@@ -105,6 +121,7 @@ export default function PartnersPage() {
                     <span className="rounded bg-slate-100 px-2 py-0.5 text-xs">{p.type.replace(/_/g, " ")}</span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{p.contactEmail ?? p.contactPhone ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">{p.panNumber ?? "—"}</td>
                   <td className="px-4 py-3">{p._count.referredLeads} referred · {p._count.referredStudents} converted</td>
                 </tr>
               ))}

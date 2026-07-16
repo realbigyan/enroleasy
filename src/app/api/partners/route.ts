@@ -9,6 +9,8 @@ const createSchema = z.object({
   type: z.enum(["REFERRAL", "B2B_APPLICATION", "EXAM_BODY"]).default("REFERRAL"),
   contactEmail: z.string().email().optional().nullable(),
   contactPhone: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  panNumber: z.string().optional().nullable(),
   commissionPct: z.number().optional().nullable(),
 });
 

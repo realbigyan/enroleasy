@@ -10,18 +10,23 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
   const session = await getSession();
   const invoice = await prisma.invoice.findUnique({
     where: { id },
-    include: { invoicer: true, student: true, partner: true },
+    include: { invoicer: true, student: true, partner: true, lineItems: { orderBy: { order: "asc" } } },
   });
 
   if (!invoice || invoice.organizationId !== session?.organizationId) notFound();
 
-  const billedToName = invoice.student?.fullName ?? invoice.partner?.name ?? "—";
-  const billedToContact = invoice.student ? [invoice.student.email, invoice.student.phone].filter(Boolean).join(" · ") : null;
+  const isItemized = invoice.lineItems.length > 0;
   const taxIdLabel = invoice.invoicer.taxIdType && invoice.invoicer.taxIdNumber
     ? `${invoice.invoicer.taxIdType}: ${invoice.invoicer.taxIdNumber}`
     : null;
   const hasBankDetails = invoice.invoicer.bankAccountNumber || invoice.invoicer.bankName;
   const postedToLedger = invoice.currency.trim().toUpperCase() === "NPR";
+
+  const vatAmount = invoice.includeVat ? invoice.amount * 0.13 : 0;
+  const grandTotal = invoice.amount + vatAmount;
+  const totalQuantity = invoice.lineItems.reduce((sum, li) => sum + li.quantity, 0);
+
+  const title = isItemized ? (invoice.includeVat ? "VAT Invoice" : "PAN Invoice") : invoice.status === "PAID" ? "Receipt" : "Invoice";
 
   return (
     <div>
@@ -53,9 +58,9 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
             </div>
           </div>
           <div className="text-right">
-            <h1 className="text-xl font-semibold">{invoice.status === "PAID" ? "Receipt" : "Invoice"}</h1>
+            <h1 className="text-xl font-semibold uppercase">{title}</h1>
             <p className="mt-1 text-sm text-slate-500">{invoice.invoiceNumber}</p>
-            <p className="mt-2 text-xs text-slate-400">Issued {new Date(invoice.issueDate).toLocaleDateString()}</p>
+            <p className="mt-2 text-xs text-slate-400">Date: {new Date(invoice.issueDate).toLocaleDateString()}</p>
             {invoice.dueDate && <p className="text-xs text-slate-400">Due {new Date(invoice.dueDate).toLocaleDateString()}</p>}
             <span
               className={`mt-2 inline-block rounded px-2 py-0.5 text-xs font-medium ${
@@ -68,33 +73,98 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Billed To</p>
-          <p className="mt-1 font-medium">{billedToName}</p>
-          {billedToContact && <p className="text-sm text-slate-500">{billedToContact}</p>}
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">M/S</p>
+          <p className="mt-1 font-medium">{invoice.student?.fullName ?? invoice.partner?.name ?? "—"}</p>
+          {invoice.billedToType === "PARTNER" ? (
+            <>
+              {invoice.partner?.address && (
+                <p className="text-sm text-slate-500">Address: {invoice.partner.address}</p>
+              )}
+              {invoice.partner?.panNumber && (
+                <p className="text-sm text-slate-500">{invoice.includeVat ? "VAT no" : "PAN no"}: {invoice.partner.panNumber}</p>
+              )}
+            </>
+          ) : (
+            invoice.student && (
+              <p className="text-sm text-slate-500">{[invoice.student.email, invoice.student.phone].filter(Boolean).join(" · ")}</p>
+            )
+          )}
         </div>
 
-        <table className="mt-6 w-full text-sm">
-          <thead className="border-b border-slate-200 text-left text-slate-500">
-            <tr>
-              <th className="py-2">Description</th>
-              <th className="py-2">Fee Type</th>
-              <th className="py-2 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-slate-100">
-              <td className="py-3">{invoice.description ?? "—"}</td>
-              <td className="py-3">{invoice.feeType}</td>
-              <td className="py-3 text-right">{invoice.currency} {invoice.amount.toFixed(2)}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={2} className="pt-3 text-right font-medium">Total</td>
-              <td className="pt-3 text-right font-semibold">{invoice.currency} {invoice.amount.toFixed(2)}</td>
-            </tr>
-          </tfoot>
-        </table>
+        {isItemized ? (
+          <table className="mt-6 w-full text-sm">
+            <thead className="border-b border-slate-200 text-left text-slate-500">
+              <tr>
+                <th className="py-2 pr-2">S.N</th>
+                <th className="py-2 pr-2">H.S. Code</th>
+                <th className="py-2 pr-2">Description</th>
+                <th className="py-2 pr-2 text-right">Qty</th>
+                <th className="py-2 pr-2 text-right">Rate</th>
+                <th className="py-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoice.description && (
+                <tr className="border-b border-slate-100 bg-amber-50">
+                  <td colSpan={6} className="py-2 font-medium text-amber-800">{invoice.description}</td>
+                </tr>
+              )}
+              {invoice.lineItems.map((li, i) => (
+                <tr key={li.id} className="border-b border-slate-100">
+                  <td className="py-2 pr-2">{i + 1}</td>
+                  <td className="py-2 pr-2 text-slate-500">{li.hsCode ?? "-"}</td>
+                  <td className="py-2 pr-2">{li.description}</td>
+                  <td className="py-2 pr-2 text-right">{li.quantity}</td>
+                  <td className="py-2 pr-2 text-right">{li.rate.toFixed(2)}</td>
+                  <td className="py-2 text-right">{li.amount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-green-50">
+                <td colSpan={3} className="pt-3 pb-1 font-semibold">Taxable Amount</td>
+                <td className="pt-3 pb-1 text-right font-semibold">{totalQuantity}</td>
+                <td></td>
+                <td className="pt-3 pb-1 text-right font-semibold">{invoice.currency} {invoice.amount.toFixed(2)}</td>
+              </tr>
+              {invoice.includeVat && (
+                <>
+                  <tr>
+                    <td colSpan={5} className="py-1 text-right text-slate-500">13% VAT</td>
+                    <td className="py-1 text-right text-slate-700">{invoice.currency} {vatAmount.toFixed(2)}</td>
+                  </tr>
+                  <tr className="bg-green-100">
+                    <td colSpan={5} className="py-2 text-right font-semibold">Grand Amount</td>
+                    <td className="py-2 text-right font-semibold">{invoice.currency} {grandTotal.toFixed(2)}</td>
+                  </tr>
+                </>
+              )}
+            </tfoot>
+          </table>
+        ) : (
+          <table className="mt-6 w-full text-sm">
+            <thead className="border-b border-slate-200 text-left text-slate-500">
+              <tr>
+                <th className="py-2">Description</th>
+                <th className="py-2">Fee Type</th>
+                <th className="py-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-slate-100">
+                <td className="py-3">{invoice.description ?? "—"}</td>
+                <td className="py-3">{invoice.feeType}</td>
+                <td className="py-3 text-right">{invoice.currency} {invoice.amount.toFixed(2)}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2} className="pt-3 text-right font-medium">Total</td>
+                <td className="pt-3 text-right font-semibold">{invoice.currency} {invoice.amount.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        )}
 
         {invoice.status === "PAID" ? (
           <p className="mt-6 text-sm text-green-700">Paid on {invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString() : "—"}.</p>

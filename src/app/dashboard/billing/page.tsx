@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 type Invoicer = { id: string; name: string; invoicePrefix: string; isDefault: boolean; isActive: boolean };
 type Invoice = {
@@ -19,6 +19,10 @@ type Invoice = {
   partner: { name: string } | null;
 };
 
+type LineItemForm = { hsCode: string; description: string; quantity: string; rate: string };
+
+const emptyLineItem = (): LineItemForm => ({ hsCode: "", description: "", quantity: "1", rate: "" });
+
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoicers, setInvoicers] = useState<Invoicer[]>([]);
@@ -31,10 +35,10 @@ export default function BillingPage() {
     studentId: "",
     partnerId: "",
     feeType: "MANUAL",
-    description: "",
-    amount: "",
     currency: "USD",
+    includeVat: false,
   });
+  const [lineItems, setLineItems] = useState<LineItemForm[]>([emptyLineItem()]);
   const [invoicerForm, setInvoicerForm] = useState({ name: "", invoicePrefix: "" });
 
   async function load() {
@@ -55,8 +59,33 @@ export default function BillingPage() {
   const collected = invoices.filter((i) => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
   const outstanding = invoices.filter((i) => i.status === "UNPAID").reduce((sum, i) => sum + i.amount, 0);
 
+  const validLineItems = lineItems
+    .map((li) => ({
+      hsCode: li.hsCode.trim() || undefined,
+      description: li.description.trim(),
+      quantity: Number(li.quantity) || 0,
+      rate: Number(li.rate) || 0,
+    }))
+    .filter((li) => li.description && li.quantity > 0 && li.rate >= 0);
+  const subtotal = validLineItems.reduce((sum, li) => sum + li.quantity * li.rate, 0);
+  const vatAmount = form.includeVat ? subtotal * 0.13 : 0;
+  const grandTotal = subtotal + vatAmount;
+
+  function updateLineItem(index: number, patch: Partial<LineItemForm>) {
+    setLineItems((prev) => prev.map((li, i) => (i === index ? { ...li, ...patch } : li)));
+  }
+
+  function addLineItem() {
+    setLineItems((prev) => [...prev, emptyLineItem()]);
+  }
+
+  function removeLineItem(index: number) {
+    setLineItems((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
+
   async function createInvoice(e: React.FormEvent) {
     e.preventDefault();
+    if (validLineItems.length === 0) return;
     await fetch("/api/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,13 +94,14 @@ export default function BillingPage() {
         studentId: form.billedToType === "STUDENT" ? form.studentId : undefined,
         partnerId: form.billedToType === "PARTNER" ? form.partnerId : undefined,
         feeType: form.feeType,
-        description: form.description || undefined,
-        amount: Number(form.amount),
+        lineItems: validLineItems,
+        includeVat: form.includeVat,
         currency: form.currency,
         markPaid: form.documentKind === "RECEIPT",
       }),
     });
-    setForm({ documentKind: "INVOICE", billedToType: "STUDENT", studentId: "", partnerId: "", feeType: "MANUAL", description: "", amount: "", currency: "USD" });
+    setForm({ documentKind: "INVOICE", billedToType: "STUDENT", studentId: "", partnerId: "", feeType: "MANUAL", currency: "USD", includeVat: false });
+    setLineItems([emptyLineItem()]);
     setShowForm(false);
     load();
   }
@@ -146,49 +176,100 @@ export default function BillingPage() {
       )}
 
       {showForm && (
-        <form onSubmit={createInvoice} className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-4">
-          <div className="flex overflow-hidden rounded-md border border-slate-300 text-sm sm:col-span-4">
-            {(["INVOICE", "RECEIPT"] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setForm({ ...form, documentKind: k })}
-                className={`flex-1 px-3 py-2 font-medium ${form.documentKind === k ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
-              >
-                {k === "INVOICE" ? "Invoice (payment pending)" : "Receipt (payment already received)"}
-              </button>
-            ))}
+        <form onSubmit={createInvoice} className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-5">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="flex overflow-hidden rounded-md border border-slate-300 text-sm sm:col-span-4">
+              {(["INVOICE", "RECEIPT"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setForm({ ...form, documentKind: k })}
+                  className={`flex-1 px-3 py-2 font-medium ${form.documentKind === k ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                >
+                  {k === "INVOICE" ? "Invoice (payment pending)" : "Receipt (payment already received)"}
+                </button>
+              ))}
+            </div>
+            <select value={form.billedToType} onChange={(e) => setForm({ ...form, billedToType: e.target.value as "STUDENT" | "PARTNER" })}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="STUDENT">Bill a student</option>
+              <option value="PARTNER">Bill a partner</option>
+            </select>
+            {form.billedToType === "STUDENT" ? (
+              <input required placeholder="Student ID" value={form.studentId}
+                onChange={(e) => setForm({ ...form, studentId: e.target.value })}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            ) : (
+              <input required placeholder="Partner ID" value={form.partnerId}
+                onChange={(e) => setForm({ ...form, partnerId: e.target.value })}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            )}
+            <select value={form.feeType} onChange={(e) => setForm({ ...form, feeType: e.target.value })}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <option value="MANUAL">Manual</option>
+              <option value="MEMBERSHIP">Membership</option>
+              <option value="COMMISSION">Commission</option>
+            </select>
+            <input placeholder="Currency" value={form.currency}
+              onChange={(e) => setForm({ ...form, currency: e.target.value })}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
           </div>
-          <select value={form.billedToType} onChange={(e) => setForm({ ...form, billedToType: e.target.value as "STUDENT" | "PARTNER" })}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm">
-            <option value="STUDENT">Bill a student</option>
-            <option value="PARTNER">Bill a partner</option>
-          </select>
-          {form.billedToType === "STUDENT" ? (
-            <input required placeholder="Student ID" value={form.studentId}
-              onChange={(e) => setForm({ ...form, studentId: e.target.value })}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          ) : (
-            <input required placeholder="Partner ID" value={form.partnerId}
-              onChange={(e) => setForm({ ...form, partnerId: e.target.value })}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          )}
-          <select value={form.feeType} onChange={(e) => setForm({ ...form, feeType: e.target.value })}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm">
-            <option value="MANUAL">Manual</option>
-            <option value="MEMBERSHIP">Membership</option>
-            <option value="COMMISSION">Commission</option>
-          </select>
-          <input required type="number" step="0.01" placeholder="Amount" value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          <input placeholder="Description" value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-3" />
-          <input placeholder="Currency" value={form.currency}
-            onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          <button type="submit" className="sm:col-span-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+
+          <div>
+            <div className="grid grid-cols-12 gap-2 px-1 text-xs font-medium text-slate-500">
+              <span className="col-span-2">H.S. Code</span>
+              <span className="col-span-4">Description</span>
+              <span className="col-span-2">Qty</span>
+              <span className="col-span-2">Rate</span>
+              <span className="col-span-1">Amount</span>
+              <span className="col-span-1"></span>
+            </div>
+            <div className="mt-1 space-y-2">
+              {lineItems.map((li, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2">
+                  <input placeholder="Optional" value={li.hsCode}
+                    onChange={(e) => updateLineItem(i, { hsCode: e.target.value })}
+                    className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                  <input required placeholder="e.g. PB IELTS" value={li.description}
+                    onChange={(e) => updateLineItem(i, { description: e.target.value })}
+                    className="col-span-4 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                  <input required type="number" step="0.01" min="0" value={li.quantity}
+                    onChange={(e) => updateLineItem(i, { quantity: e.target.value })}
+                    className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                  <input required type="number" step="0.01" min="0" value={li.rate}
+                    onChange={(e) => updateLineItem(i, { rate: e.target.value })}
+                    className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                  <span className="col-span-1 self-center text-sm text-slate-500">
+                    {((Number(li.quantity) || 0) * (Number(li.rate) || 0)).toFixed(2)}
+                  </span>
+                  <button type="button" onClick={() => removeLineItem(i)} className="col-span-1 self-center text-slate-400 hover:text-red-600">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={addLineItem} className="mt-2 text-xs font-medium text-indigo-600 hover:underline">
+              + Add line item
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.includeVat} onChange={(e) => setForm({ ...form, includeVat: e.target.checked })} />
+              Include 13% VAT (VAT invoice)
+            </label>
+            <div className="text-right text-sm">
+              <p className="text-slate-500">Taxable amount: <span className="font-medium text-slate-800">{subtotal.toFixed(2)}</span></p>
+              {form.includeVat && (
+                <>
+                  <p className="text-slate-500">13% VAT: <span className="font-medium text-slate-800">{vatAmount.toFixed(2)}</span></p>
+                  <p className="text-slate-700">Grand amount: <span className="font-semibold">{grandTotal.toFixed(2)}</span></p>
+                </>
+              )}
+            </div>
+          </div>
+
+          <button type="submit" disabled={validLineItems.length === 0} className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
             {form.documentKind === "RECEIPT" ? "Create receipt" : "Create invoice"}
           </button>
         </form>
