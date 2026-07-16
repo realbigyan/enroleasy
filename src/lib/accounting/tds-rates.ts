@@ -30,21 +30,45 @@ export function suggestExpenseTdsRate(hasVatInvoice: boolean): number {
   return hasVatInvoice ? 1.5 : 15;
 }
 
-// Progressive salary TDS slabs, FY 2082/83, individual (unmarried) resident
-// taxpayer, annual NPR. Nepal also has separate (higher-threshold) slabs for
-// married couples and additional rules for remote-area/disability rebates —
-// this covers the common individual case; extend per-employee if needed.
-// Source: Income Tax Act 2058 as amended by the Finance Act for 2082/83.
-export const SALARY_TDS_SLABS_INDIVIDUAL_2082_83 = [
-  { upTo: 500_000, rate: 0 },
-  { upTo: 700_000, rate: 0.1 },
-  { upTo: 1_000_000, rate: 0.2 },
-  { upTo: 2_000_000, rate: 0.3 },
-  { upTo: Infinity, rate: 0.36 },
+// Progressive salary TDS slabs, FY 2083/84 (2026/27), resident individual
+// taxpayer, annual NPR. Budget 2083/84 substantially restructured these:
+// the old FY 2082/83 schedule (0% to 500k / 10% / 20% / 30% / 36%) is gone.
+//   - Tax-free-equivalent threshold doubled: 500,000 -> 1,000,000 (though
+//     it's no longer a true 0% band for most taxpayers — see below).
+//   - Top marginal rate cut: 39% -> 29% (36% -> 29% in this codebase, since
+//     only the individual schedule was modeled here; Nepal previously also
+//     had a separate, higher-threshold married-couple schedule, but Budget
+//     2083/84 removed that distinction and unified everyone onto one
+//     schedule, so there is now only one slab table to maintain).
+// Source: https://www.saca.com.np/tds-rates-nepal-fy-2083-84/ and
+// https://nitipartners.com/income-tax-changes-as-per-budget-2083-84-2026-27/
+// (both accessed/verified 2026-07-16). Re-verify every Shrawan (~mid-July)
+// against the new Finance Act before relying on this for a new fiscal year.
+export const SALARY_TDS_SLABS_INDIVIDUAL_2083_84 = [
+  { upTo: 1_000_000, rate: 0.01 },
+  { upTo: 1_500_000, rate: 0.1 },
+  { upTo: 2_500_000, rate: 0.2 },
+  { upTo: 4_000_000, rate: 0.27 },
+  { upTo: Infinity, rate: 0.29 },
+];
+
+// The first slab above is taxed at 1%, not 0% — UNLESS the taxpayer is a
+// registered sole proprietorship, is receiving pension income, or is a
+// natural person contributing to a pension fund / contribution-based Social
+// Security Fund (SSF), in which case that first NPR 1,000,000 is untaxed
+// (Schedule 1, Section 1(1)(ka)). This payroll module already tracks
+// SSF enrollment per employee, so `computeMonthlyPayslip` below picks this
+// table automatically for SSF-enrolled staff rather than the 1% table.
+export const SALARY_TDS_SLABS_SSF_ENROLLED_2083_84 = [
+  { upTo: 1_000_000, rate: 0 },
+  { upTo: 1_500_000, rate: 0.1 },
+  { upTo: 2_500_000, rate: 0.2 },
+  { upTo: 4_000_000, rate: 0.27 },
+  { upTo: Infinity, rate: 0.29 },
 ];
 
 /** Computes annual income tax on `annualTaxableIncome` (NPR) using the progressive slabs above. */
-export function computeSalaryTax(annualTaxableIncome: number, slabs = SALARY_TDS_SLABS_INDIVIDUAL_2082_83): number {
+export function computeSalaryTax(annualTaxableIncome: number, slabs = SALARY_TDS_SLABS_INDIVIDUAL_2083_84): number {
   let tax = 0;
   let lower = 0;
   for (const slab of slabs) {
@@ -85,7 +109,7 @@ export function computeMonthlyPayslip(
   basicSalary: number,
   allowances: number,
   ssfEnrolled: boolean,
-  slabs = SALARY_TDS_SLABS_INDIVIDUAL_2082_83
+  slabs = ssfEnrolled ? SALARY_TDS_SLABS_SSF_ENROLLED_2083_84 : SALARY_TDS_SLABS_INDIVIDUAL_2083_84
 ): PayslipCalculation {
   const grossPay = basicSalary + allowances;
   const ssfEmployee = ssfEnrolled ? Math.round(grossPay * SSF_EMPLOYEE_RATE * 100) / 100 : 0;
