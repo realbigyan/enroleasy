@@ -32,11 +32,13 @@ const nav = [
 
 export function DashboardNav({
   orgName,
+  orgLogoUrl,
   userName,
   role,
   isSuperAdmin,
 }: {
   orgName: string;
+  orgLogoUrl?: string | null;
   userName: string;
   role: string;
   isSuperAdmin: boolean;
@@ -53,8 +55,18 @@ export function DashboardNav({
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white print:hidden">
       <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-6 py-5">
-        <span className="flex items-center gap-2 font-semibold">
-          <LogoMark className="h-6 w-6" /> EnrolEasy
+        <span className="flex min-w-0 items-center gap-2 font-semibold">
+          {orgLogoUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- external Cloudinary URL, not a local asset */}
+              <img src={orgLogoUrl} alt={orgName} className="h-7 w-7 shrink-0 rounded object-contain" />
+              <span className="truncate">{orgName}</span>
+            </>
+          ) : (
+            <>
+              <LogoMark className="h-6 w-6 shrink-0" /> EnrolEasy
+            </>
+          )}
         </span>
         <NotificationBell />
       </div>

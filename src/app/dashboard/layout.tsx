@@ -33,6 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex min-h-screen flex-1">
       <DashboardNav
         orgName={org.name}
+        orgLogoUrl={org.logoUrl}
         userName={session.name}
         role={session.role}
         isSuperAdmin={isSuperAdmin}

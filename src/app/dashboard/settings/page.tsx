@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Download } from "lucide-react";
+import { AlertTriangle, Download, Upload, Image as ImageIcon } from "lucide-react";
 
 type ActiveSession = {
   id: string;
@@ -46,6 +46,12 @@ export default function SettingsPage() {
 
   const [role, setRole] = useState<string | null>(null);
   const [orgName, setOrgName] = useState<string | null>(null);
+
+  const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [savingLogo, setSavingLogo] = useState(false);
+  const [logoMessage, setLogoMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [deleteForm, setDeleteForm] = useState({ confirmName: "", password: "" });
@@ -63,11 +69,84 @@ export default function SettingsPage() {
             .then((res) => res.json())
             .then((d) => setOrgName(d.organization?.name ?? null))
             .catch(() => {});
+          fetch("/api/organization/branding")
+            .then((res) => res.json())
+            .then((d) => setOrgLogoUrl(d.organization?.logoUrl ?? null))
+            .catch(() => {});
         }
       })
       .catch(() => setTwoFactorEnabled(false));
     refreshSessions();
   }, []);
+
+  async function uploadImage(file: File): Promise<string> {
+    const signRes = await fetch("/api/documents/sign", { method: "POST" });
+    const sign = await signRes.json();
+    if (!signRes.ok) throw new Error(sign.error ?? "Could not get upload signature");
+
+    const form = new FormData();
+    form.append("file", file);
+    form.append("api_key", sign.apiKey);
+    form.append("timestamp", String(sign.timestamp));
+    form.append("signature", sign.signature);
+    form.append("folder", sign.folder);
+
+    const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloudName}/auto/upload`, {
+      method: "POST",
+      body: form,
+    });
+    const uploaded = await uploadRes.json();
+    if (!uploadRes.ok) throw new Error(uploaded.error?.message ?? "Upload failed");
+    return uploaded.secure_url as string;
+  }
+
+  async function onOrgLogoSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setLogoMessage(null);
+    setUploadingLogo(true);
+    try {
+      const url = await uploadImage(file);
+      setSavingLogo(true);
+      const res = await fetch("/api/organization/branding", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl: url }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not save logo");
+      setOrgLogoUrl(data.organization?.logoUrl ?? url);
+      setLogoMessage({ type: "success", text: "Logo updated." });
+      router.refresh();
+    } catch (err) {
+      setLogoMessage({ type: "error", text: err instanceof Error ? err.message : "Logo upload failed" });
+    } finally {
+      setUploadingLogo(false);
+      setSavingLogo(false);
+    }
+  }
+
+  async function removeOrgLogo() {
+    setLogoMessage(null);
+    setSavingLogo(true);
+    try {
+      const res = await fetch("/api/organization/branding", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl: null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not remove logo");
+      setOrgLogoUrl(null);
+      setLogoMessage({ type: "success", text: "Logo removed — showing the default EnrolEasy mark again." });
+      router.refresh();
+    } catch (err) {
+      setLogoMessage({ type: "error", text: err instanceof Error ? err.message : "Could not remove logo" });
+    } finally {
+      setSavingLogo(false);
+    }
+  }
 
   async function refreshSessions() {
     try {
@@ -497,6 +576,48 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {role === "OWNER" && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold">Organization Branding</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Replace the EnrolEasy mark in your dashboard sidebar with your own logo.
+          </p>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center gap-4">
+              {orgLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- external Cloudinary URL, not a local asset
+                <img src={orgLogoUrl} alt={orgName ?? "Organization logo"} className="h-16 w-16 rounded border border-slate-200 object-contain" />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded border border-dashed border-slate-300 text-slate-300">
+                  <ImageIcon className="h-6 w-6" />
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <label className="flex cursor-pointer items-center gap-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                  <Upload className="h-3.5 w-3.5" />
+                  {uploadingLogo ? "Uploading…" : savingLogo ? "Saving…" : "Upload logo"}
+                  <input type="file" accept="image/*" className="hidden" onChange={onOrgLogoSelected} disabled={uploadingLogo || savingLogo} />
+                </label>
+                {orgLogoUrl && (
+                  <button
+                    onClick={removeOrgLogo}
+                    disabled={savingLogo}
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            {logoMessage && (
+              <p className={`mt-3 text-sm ${logoMessage.type === "success" ? "text-green-600" : "text-red-600"}`}>
+                {logoMessage.text}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {role === "OWNER" && (
         <div className="mt-6">
