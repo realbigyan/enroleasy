@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, ArrowLeft, Users } from "lucide-react";
+import { Plus, ArrowLeft, Users, Trash2 } from "lucide-react";
 
 type Employee = {
   id: string;
@@ -78,6 +78,17 @@ export default function PayrollPage() {
     }
   }
 
+  async function deleteEmployee(id: string, name: string) {
+    if (!window.confirm(`Remove ${name} from payroll? This also deletes all their payslips and can't be undone.`)) return;
+    const res = await fetch(`/api/accounting/employees/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setEmployees((prev) => prev.filter((e) => e.id !== id));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Could not remove this employee");
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -136,6 +147,7 @@ export default function PayrollPage() {
                 <th className="px-4 py-3 text-right">Allowances</th>
                 <th className="px-4 py-3 text-center">SSF</th>
                 <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -156,6 +168,11 @@ export default function PayrollPage() {
                     ) : (
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">Inactive</span>
                     )}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <button onClick={() => deleteEmployee(e.id, e.name)} title="Delete employee" className="text-slate-400 hover:text-red-600">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
