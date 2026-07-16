@@ -24,3 +24,21 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Removing the @page margin (rather than leaving it at the browser default)
+   collapses the reserved header/footer strip Chrome/Edge normally draw the
+   page title, URL, date, and "1 of 1" into when printing — so invoices,
+   receipts, and payslips print/save-as-PDF without that browser chrome.
+   We add the visual margin back on body instead, print-only. This only
+   works when the browser's print dialog margin setting is left on
+   "Default" — a "Custom"/"None" margin choice there overrides it, and the
+   "Headers and footers" checkbox is a separate per-browser setting some
+   browsers may still honor regardless of this CSS. */
+@media print {
+  @page {
+    margin: 0;
+  }
+  body {
+    margin: 1.5cm;
+  }
+}
