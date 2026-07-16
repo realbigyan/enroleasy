@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { PersonCombobox } from "@/components/ui/PersonCombobox";
+import { DeleteInvoiceButton } from "@/components/billing/DeleteInvoiceButton";
 import { TDS_RULES } from "@/lib/accounting/tds-rates";
 
 type Invoicer = { id: string; name: string; invoicePrefix: string; isDefault: boolean; isActive: boolean; taxIdType: "PAN" | "VAT" | null };
@@ -452,6 +453,7 @@ export default function BillingPage() {
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Issued</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -478,6 +480,13 @@ export default function BillingPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-slate-500">{new Date(inv.issueDate).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-right">
+                    <DeleteInvoiceButton
+                      invoiceId={inv.id}
+                      invoiceNumber={inv.invoiceNumber}
+                      onDeleted={() => setInvoices((prev) => prev.filter((i) => i.id !== inv.id))}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>

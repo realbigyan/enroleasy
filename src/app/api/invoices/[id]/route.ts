@@ -24,6 +24,43 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 }
 
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    // Deleting an invoice/receipt is destructive (it also unwinds any ledger
+    // postings), so it's restricted to OWNER/ADMIN — meant for correcting
+    // genuine mistakes or removing test invoices, not routine use.
+    const session = await requireSession(["OWNER", "ADMIN"]);
+    const existing = await prisma.invoice.findUnique({ where: { id } });
+    if (!existing || existing.organizationId !== session.organizationId) throw new ApiError(404, "Invoice not found");
+
+    // Unwind whatever was posted to the ledger before removing the invoice —
+    // JournalEntry rows reference the invoice by sourceId (not a DB FK), so
+    // they'd otherwise be orphaned.
+    try {
+      await reverseInvoicePayment(id);
+      await reverseInvoiceAccrual(id);
+    } catch (postingErr) {
+      console.error("Failed to reverse invoice ledger entries before delete", id, postingErr);
+    }
+
+    await prisma.invoice.delete({ where: { id } });
+
+    await logAudit({
+      organizationId: session.organizationId,
+      actorId: session.userId,
+      action: "delete",
+      entityType: "Invoice",
+      entityId: id,
+      before: existing,
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;

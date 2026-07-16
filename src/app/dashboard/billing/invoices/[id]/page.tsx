@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PrintButton } from "@/components/student/PrintButton";
+import { DeleteInvoiceButton } from "@/components/billing/DeleteInvoiceButton";
 
 export default async function InvoiceViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,7 +35,10 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
         <Link href="/dashboard/billing" className="flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-700">
           <ArrowLeft className="h-4 w-4" /> Back to Billing
         </Link>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PrintButton />
+          <DeleteInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber} variant="button" />
+        </div>
       </div>
 
       {!postedToLedger && (
