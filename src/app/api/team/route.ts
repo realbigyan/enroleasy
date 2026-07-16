@@ -30,7 +30,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession(["OWNER", "ADMIN"]);
+    // Staff management (add/edit/deactivate/delete/reset password) is
+    // OWNER-only — an ADMIN shouldn't be able to manage their own peers or
+    // grant/revoke access for other staff.
+    const session = await requireSession(["OWNER"]);
     const body = createSchema.parse(await req.json());
 
     const existing = await prisma.user.findFirst({

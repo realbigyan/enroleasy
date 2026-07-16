@@ -14,7 +14,8 @@ const updateSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await requireSession(["OWNER", "ADMIN"]);
+    // Staff management is OWNER-only — see POST /api/team for rationale.
+    const session = await requireSession(["OWNER"]);
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing || existing.organizationId !== session.organizationId) throw new ApiError(404, "User not found");
 
@@ -42,7 +43,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await requireSession(["OWNER", "ADMIN"]);
+    // Staff management is OWNER-only — see POST /api/team for rationale.
+    const session = await requireSession(["OWNER"]);
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing || existing.organizationId !== session.organizationId) throw new ApiError(404, "User not found");
     if (existing.role === "OWNER") throw new ApiError(400, "Cannot delete the organization owner");

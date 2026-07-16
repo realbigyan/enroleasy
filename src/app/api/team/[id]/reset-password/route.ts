@@ -8,7 +8,8 @@ import { logAudit } from "@/lib/audit";
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await requireSession(["OWNER", "ADMIN"]);
+    // Staff management is OWNER-only — see POST /api/team for rationale.
+    const session = await requireSession(["OWNER"]);
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing || existing.organizationId !== session.organizationId) throw new ApiError(404, "User not found");
 

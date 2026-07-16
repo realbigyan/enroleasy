@@ -24,7 +24,7 @@ const nav = [
   { href: "/dashboard/settings/customize", label: "Customize", icon: SlidersHorizontal, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/billing", label: "Billing", icon: Receipt, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/accounting", label: "Accounting", icon: Calculator, roles: ["OWNER", "ADMIN"] },
-  { href: "/dashboard/team", label: "Team", icon: ShieldCheck, roles: ["OWNER", "ADMIN"] },
+  { href: "/dashboard/team", label: "Team", icon: ShieldCheck, roles: ["OWNER"] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: ScrollText, roles: ["OWNER", "ADMIN"] },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, roles: null },
   { href: "/dashboard/superadmin", label: "Superadmin", icon: Crown, roles: null, superAdminOnly: true },
