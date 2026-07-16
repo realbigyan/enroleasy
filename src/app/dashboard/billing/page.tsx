@@ -112,16 +112,23 @@ export default function BillingPage() {
   const computedLineItems = lineItems.map((li) => {
     const quantity = Number(li.quantity) || 0;
     if (form.includeVat) {
-      const gross = Number(li.grossAmount) || 0;
-      const taxableAmount = gross / (1 + VAT_RATE);
+      // "Amount (client pays)" is per unit (e.g. per booking/per student) —
+      // multiply by quantity before backing out the taxable amount, same as
+      // the plain PAN-rate branch below does for its per-unit rate.
+      const grossPerUnit = Number(li.grossAmount) || 0;
+      const grossTotal = grossPerUnit * quantity;
+      const taxableAmount = grossTotal / (1 + VAT_RATE);
       const rate = quantity > 0 ? taxableAmount / quantity : 0;
-      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, settled: gross };
+      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, settled: grossTotal };
     }
     if (isPartnerCommissionPan) {
-      const net = Number(li.netAmount) || 0;
-      const taxableAmount = net / (1 - COMMISSION_TDS_RATE);
+      // "Net received" is per booking, per the helper text below — multiply
+      // by quantity before backing out the taxable commission.
+      const netPerUnit = Number(li.netAmount) || 0;
+      const netTotal = netPerUnit * quantity;
+      const taxableAmount = netTotal / (1 - COMMISSION_TDS_RATE);
       const rate = quantity > 0 ? taxableAmount / quantity : 0;
-      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, settled: net };
+      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, settled: netTotal };
     }
     const rate = Number(li.rate) || 0;
     const taxableAmount = quantity * rate;
@@ -298,13 +305,13 @@ export default function BillingPage() {
               <span className="col-span-1">Qty</span>
               {form.includeVat ? (
                 <>
-                  <span className="col-span-2">Amount (client pays)</span>
-                  <span className="col-span-2">Taxable (auto)</span>
+                  <span className="col-span-2">Amount (client pays, per unit)</span>
+                  <span className="col-span-2">Taxable (auto, total)</span>
                 </>
               ) : isPartnerCommissionPan ? (
                 <>
-                  <span className="col-span-2">Net received (after 15% TDS)</span>
-                  <span className="col-span-2">Taxable (auto)</span>
+                  <span className="col-span-2">Net received (after 15% TDS, per unit)</span>
+                  <span className="col-span-2">Taxable (auto, total)</span>
                 </>
               ) : (
                 <>
@@ -332,7 +339,7 @@ export default function BillingPage() {
                         onChange={(e) => updateLineItem(i, { grossAmount: e.target.value })}
                         className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
                       <span className="col-span-2 self-center text-sm text-slate-500">
-                        {((Number(li.grossAmount) || 0) / (1 + VAT_RATE)).toFixed(2)}
+                        {(((Number(li.grossAmount) || 0) * (Number(li.quantity) || 0)) / (1 + VAT_RATE)).toFixed(2)}
                       </span>
                     </>
                   ) : isPartnerCommissionPan ? (
@@ -341,7 +348,7 @@ export default function BillingPage() {
                         onChange={(e) => updateLineItem(i, { netAmount: e.target.value })}
                         className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
                       <span className="col-span-2 self-center text-sm text-slate-500">
-                        {((Number(li.netAmount) || 0) / (1 - COMMISSION_TDS_RATE)).toFixed(2)}
+                        {(((Number(li.netAmount) || 0) * (Number(li.quantity) || 0)) / (1 - COMMISSION_TDS_RATE)).toFixed(2)}
                       </span>
                     </>
                   ) : (
