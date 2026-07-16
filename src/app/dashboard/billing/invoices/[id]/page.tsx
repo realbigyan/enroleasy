@@ -49,17 +49,15 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
 
       <div className="mt-4 rounded-xl border border-slate-200 bg-white p-8 print:border-0 print:p-0">
         <div className="flex items-start justify-between border-b border-slate-100 pb-6">
-          <div className="flex items-start gap-4">
+          <div>
             {invoice.invoicer.logoUrl && (
               // eslint-disable-next-line @next/next/no-img-element -- external Cloudinary URL, not a local asset
-              <img src={invoice.invoicer.logoUrl} alt={invoice.invoicer.name} className="h-14 w-14 rounded object-contain" />
+              <img src={invoice.invoicer.logoUrl} alt={invoice.invoicer.name} className="h-20 w-20 rounded object-contain" />
             )}
-            <div>
-              <p className="text-lg font-semibold">{invoice.invoicer.name}</p>
-              {invoice.invoicer.addressLine1 && <p className="text-sm text-slate-500">{invoice.invoicer.addressLine1}</p>}
-              {invoice.invoicer.addressLine2 && <p className="text-sm text-slate-500">{invoice.invoicer.addressLine2}</p>}
-              {taxIdLabel && <p className="mt-1 text-xs text-slate-400">{taxIdLabel}</p>}
-            </div>
+            <p className={`${invoice.invoicer.logoUrl ? "mt-3" : ""} text-lg font-semibold`}>{invoice.invoicer.name}</p>
+            {invoice.invoicer.addressLine1 && <p className="text-sm text-slate-500">{invoice.invoicer.addressLine1}</p>}
+            {invoice.invoicer.addressLine2 && <p className="text-sm text-slate-500">{invoice.invoicer.addressLine2}</p>}
+            {taxIdLabel && <p className="mt-1 text-xs text-slate-400">{taxIdLabel}</p>}
           </div>
           <div className="text-right">
             <h1 className="text-xl font-semibold uppercase">{title}</h1>
