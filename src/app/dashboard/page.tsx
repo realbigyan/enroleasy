@@ -53,7 +53,7 @@ export default async function DashboardOverview() {
     { label: "Open tasks", value: openTasks, icon: CheckSquare },
     { label: "Stale leads (14+ days)", value: staleLeadCount, icon: AlertTriangle },
     { label: "Tasks due", value: tasksDue, icon: CheckSquare },
-    { label: "Revenue collected", value: `$${(revenueAgg._sum.amount ?? 0).toFixed(2)}`, icon: DollarSign },
+    { label: "Revenue collected", value: `NPR ${(revenueAgg._sum.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: DollarSign },
   ];
 
   // Snapshot funnel: how many leads currently sit at or past each stage.

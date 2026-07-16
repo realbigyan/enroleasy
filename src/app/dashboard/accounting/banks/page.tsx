@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, ArrowLeft, Landmark, Wallet } from "lucide-react";
+import { Plus, ArrowLeft, Landmark, Wallet, Trash2 } from "lucide-react";
 
 type BankAccount = {
   id: string;
@@ -40,6 +40,17 @@ export default function BanksPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
     load();
   }, []);
+
+  async function deleteAccount(id: string, name: string) {
+    if (!window.confirm(`Delete ${name}? This can't be undone.`)) return;
+    const res = await fetch(`/api/accounting/bank-accounts/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setAccounts((prev) => prev.filter((a) => a.id !== id));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Could not delete this account — it may have recorded transactions. Deactivate it instead.");
+    }
+  }
 
   async function createAccount(e: React.FormEvent) {
     e.preventDefault();
@@ -117,17 +128,28 @@ export default function BanksPage() {
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {accounts.map((a) => (
-            <Link key={a.id} href={`/dashboard/accounting/banks/${a.id}`}
+            <div key={a.id}
               className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 hover:border-indigo-300">
-              <div className="flex items-center gap-3">
+              <Link href={`/dashboard/accounting/banks/${a.id}`} className="flex flex-1 items-center gap-3">
                 {a.kind === "CASH" ? <Wallet className="h-5 w-5 text-slate-400" /> : <Landmark className="h-5 w-5 text-slate-400" />}
                 <div>
                   <p className="font-medium text-slate-800">{a.name}</p>
                   <p className="text-xs text-slate-500">{a.bankName ? `${a.bankName} · ` : ""}{a.accountNumber ?? (a.kind === "CASH" ? "Cash" : "")}</p>
                 </div>
+              </Link>
+              <div className="flex items-center gap-3">
+                <Link href={`/dashboard/accounting/banks/${a.id}`} className="tabular-nums font-semibold">
+                  {formatMoney(a.balance, a.currency)}
+                </Link>
+                <button
+                  onClick={() => deleteAccount(a.id, a.name)}
+                  title="Delete account"
+                  className="text-slate-400 hover:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
-              <p className="tabular-nums font-semibold">{formatMoney(a.balance, a.currency)}</p>
-            </Link>
+            </div>
           ))}
         </div>
       )}

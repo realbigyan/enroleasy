@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
@@ -23,6 +23,7 @@ function formatMoney(n: number, currency: string) {
 
 export default function BankAccountDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [bankAccount, setBankAccount] = useState<BankAccountDetail | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -105,6 +106,19 @@ export default function BankAccountDetailPage() {
     if (res.ok) load();
   }
 
+  async function deleteAccount() {
+    if (!bankAccount) return;
+    if (!window.confirm(`Delete ${bankAccount.name}? This can't be undone.`)) return;
+    const res = await fetch(`/api/accounting/bank-accounts/${params.id}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/dashboard/accounting/banks");
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Could not delete this account — it may have recorded transactions. Deactivate it instead.");
+    }
+  }
+
   if (loading) return <p className="text-sm text-slate-500">Loading…</p>;
   if (!bankAccount) return <p className="text-sm text-slate-500">Bank account not found.</p>;
 
@@ -125,10 +139,16 @@ export default function BankAccountDetailPage() {
           <h1 className="text-2xl font-semibold">{bankAccount.name}</h1>
           <p className="mt-1 text-lg font-semibold tabular-nums">{formatMoney(balance, bankAccount.currency)}</p>
         </div>
-        <button onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-          <Plus className="h-4 w-4" /> Add Transaction
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={deleteAccount}
+            className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+            <Trash2 className="h-3.5 w-3.5" /> Delete Account
+          </button>
+          <button onClick={() => setShowForm((v) => !v)}
+            className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+            <Plus className="h-4 w-4" /> Add Transaction
+          </button>
+        </div>
       </div>
 
       {showForm && (
