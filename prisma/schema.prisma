@@ -309,7 +309,12 @@ model Partner {
   contactEmail   String?
   contactPhone   String?
   address        String?
-  panNumber      String?      // partner's own PAN/VAT registration number, printed on invoices billed to them
+  // Partner's own tax registration — printed under "M/S" on invoices billed
+  // to them (e.g. "VAT no: 604251480"). Independent of Invoice.includeVat,
+  // which is a per-invoice choice about whether *this* transaction is taxed;
+  // taxIdType/panNumber describe the partner's own registration status.
+  taxIdType      TaxIdType?
+  panNumber      String?      // the PAN or VAT registration number itself
   commissionPct  Float?       // default commission rate for referrals through this partner
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())

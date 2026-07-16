@@ -81,7 +81,9 @@ export default async function InvoiceViewPage({ params }: { params: Promise<{ id
                 <p className="text-sm text-slate-500">Address: {invoice.partner.address}</p>
               )}
               {invoice.partner?.panNumber && (
-                <p className="text-sm text-slate-500">{invoice.includeVat ? "VAT no" : "PAN no"}: {invoice.partner.panNumber}</p>
+                <p className="text-sm text-slate-500">
+                  {invoice.partner.taxIdType === "VAT" ? "VAT no" : invoice.partner.taxIdType === "PAN" ? "PAN no" : "PAN/VAT no"}: {invoice.partner.panNumber}
+                </p>
               )}
             </>
           ) : (

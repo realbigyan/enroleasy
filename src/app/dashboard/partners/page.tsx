@@ -10,6 +10,7 @@ type Partner = {
   contactEmail: string | null;
   contactPhone: string | null;
   address: string | null;
+  taxIdType: "PAN" | "VAT" | null;
   panNumber: string | null;
   isActive: boolean;
   _count: { referredLeads: number; referredStudents: number };
@@ -27,6 +28,7 @@ export default function PartnersPage() {
     contactEmail: "",
     contactPhone: "",
     address: "",
+    taxIdType: "" as "" | "PAN" | "VAT",
     panNumber: "",
   });
 
@@ -48,9 +50,9 @@ export default function PartnersPage() {
     await fetch("/api/partners", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, taxIdType: form.taxIdType || null }),
     });
-    setForm({ name: "", type: "REFERRAL", contactEmail: "", contactPhone: "", address: "", panNumber: "" });
+    setForm({ name: "", type: "REFERRAL", contactEmail: "", contactPhone: "", address: "", taxIdType: "", panNumber: "" });
     setShowForm(false);
     load();
   }
@@ -90,9 +92,15 @@ export default function PartnersPage() {
           <input placeholder="Address" value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
             className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
+          <select value={form.taxIdType} onChange={(e) => setForm({ ...form, taxIdType: e.target.value as "" | "PAN" | "VAT" })}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option value="">PAN or VAT?</option>
+            <option value="PAN">PAN</option>
+            <option value="VAT">VAT</option>
+          </select>
           <input placeholder="PAN/VAT number" value={form.panNumber}
             onChange={(e) => setForm({ ...form, panNumber: e.target.value })}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
           <button type="submit" className="sm:col-span-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
             Add partner
           </button>
@@ -121,7 +129,9 @@ export default function PartnersPage() {
                     <span className="rounded bg-slate-100 px-2 py-0.5 text-xs">{p.type.replace(/_/g, " ")}</span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{p.contactEmail ?? p.contactPhone ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{p.panNumber ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {p.panNumber ? `${p.taxIdType ?? "PAN/VAT"}: ${p.panNumber}` : "—"}
+                  </td>
                   <td className="px-4 py-3">{p._count.referredLeads} referred · {p._count.referredStudents} converted</td>
                 </tr>
               ))}

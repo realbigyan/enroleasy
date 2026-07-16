@@ -254,10 +254,25 @@ export default function BillingPage() {
           </div>
 
           <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.includeVat} onChange={(e) => setForm({ ...form, includeVat: e.target.checked })} />
-              Include 13% VAT (VAT invoice)
-            </label>
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-500">Invoice type</p>
+              <div className="flex overflow-hidden rounded-md border border-slate-300 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, includeVat: false })}
+                  className={`px-3 py-1.5 font-medium ${!form.includeVat ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                >
+                  PAN Invoice
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, includeVat: true })}
+                  className={`px-3 py-1.5 font-medium ${form.includeVat ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                >
+                  VAT Invoice (+13%)
+                </button>
+              </div>
+            </div>
             <div className="text-right text-sm">
               <p className="text-slate-500">Taxable amount: <span className="font-medium text-slate-800">{subtotal.toFixed(2)}</span></p>
               {form.includeVat && (

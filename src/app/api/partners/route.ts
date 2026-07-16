@@ -10,6 +10,7 @@ const createSchema = z.object({
   contactEmail: z.string().email().optional().nullable(),
   contactPhone: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
+  taxIdType: z.enum(["PAN", "VAT"]).optional().nullable(),
   panNumber: z.string().optional().nullable(),
   commissionPct: z.number().optional().nullable(),
 });
