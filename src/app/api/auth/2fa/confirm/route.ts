@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       throw new ApiError(400, "Start 2FA setup first");
     }
 
-    const valid = verifyTwoFactorToken(body.code, user.twoFactorSecret);
+    const valid = await verifyTwoFactorToken(body.code, user.twoFactorSecret);
     if (!valid) throw new ApiError(400, "Invalid verification code");
 
     await prisma.user.update({

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       throw new ApiError(401, "This login attempt has expired. Please log in again.");
     }
 
-    const valid = verifyTwoFactorToken(body.code, user.twoFactorSecret);
+    const valid = await verifyTwoFactorToken(body.code, user.twoFactorSecret);
     if (!valid) throw new ApiError(401, "Invalid verification code");
 
     await setSessionCookie(
