@@ -20,10 +20,15 @@ type Invoice = {
   partner: { name: string } | null;
 };
 
-type LineItemForm = { hsCode: string; description: string; quantity: string; rate: string };
+// `rate` is used for PAN invoices (client types the per-unit taxable rate,
+// tax has nothing to add on top). `grossAmount` is used for VAT invoices
+// (client types what the customer actually pays for that line, and the
+// taxable rate/amount is worked backward from it — see `computedLineItems`).
+type LineItemForm = { hsCode: string; description: string; quantity: string; rate: string; grossAmount: string };
 
-const emptyLineItem = (): LineItemForm => ({ hsCode: "", description: "", quantity: "1", rate: "" });
+const emptyLineItem = (): LineItemForm => ({ hsCode: "", description: "", quantity: "1", rate: "", grossAmount: "" });
 
+const VAT_RATE = 0.13;
 
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -79,17 +84,30 @@ export default function BillingPage() {
   const defaultInvoicer = invoicers.find((ic) => ic.isDefault) ?? invoicers[0];
   const canChargeVat = defaultInvoicer?.taxIdType === "VAT";
 
-  const validLineItems = lineItems
-    .map((li) => ({
-      hsCode: li.hsCode.trim() || undefined,
-      description: li.description.trim(),
-      quantity: Number(li.quantity) || 0,
-      rate: Number(li.rate) || 0,
-    }))
-    .filter((li) => li.description && li.quantity > 0 && li.rate >= 0);
-  const subtotal = validLineItems.reduce((sum, li) => sum + li.quantity * li.rate, 0);
-  const vatAmount = form.includeVat ? subtotal * 0.13 : 0;
-  const grandTotal = subtotal + vatAmount;
+  // For a VAT invoice, each row's "Amount" is what the client actually pays
+  // (gross, VAT-inclusive) — the taxable rate is derived backward from it
+  // (gross / 1.13), rather than typed in and taxed on top. For a PAN
+  // invoice there's no VAT to back out, so Rate x Qty behaves as before.
+  const computedLineItems = lineItems.map((li) => {
+    const quantity = Number(li.quantity) || 0;
+    if (form.includeVat) {
+      const gross = Number(li.grossAmount) || 0;
+      const taxableAmount = gross / (1 + VAT_RATE);
+      const rate = quantity > 0 ? taxableAmount / quantity : 0;
+      return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, gross };
+    }
+    const rate = Number(li.rate) || 0;
+    const taxableAmount = quantity * rate;
+    return { hsCode: li.hsCode.trim() || undefined, description: li.description.trim(), quantity, rate, taxableAmount, gross: taxableAmount };
+  });
+  const validLineItems = computedLineItems.filter((li) => li.description && li.quantity > 0);
+  const subtotal = validLineItems.reduce((sum, li) => sum + li.taxableAmount, 0);
+  // Grand total is always exactly the sum of what was typed as "client
+  // pays" (or, for PAN, the taxable subtotal itself) — never re-derived by
+  // multiplying subtotal x 13% again, so it can't drift by a paisa from
+  // rounding the same figure twice.
+  const grandTotal = validLineItems.reduce((sum, li) => sum + li.gross, 0);
+  const vatAmount = form.includeVat ? grandTotal - subtotal : 0;
 
   function updateLineItem(index: number, patch: Partial<LineItemForm>) {
     setLineItems((prev) => prev.map((li, i) => (i === index ? { ...li, ...patch } : li)));
@@ -115,7 +133,7 @@ export default function BillingPage() {
         studentId: form.billedToType === "STUDENT" ? form.studentId : undefined,
         partnerId: form.billedToType === "PARTNER" ? form.partnerId : undefined,
         feeType: form.feeType,
-        lineItems: validLineItems,
+        lineItems: validLineItems.map(({ hsCode, description, quantity, rate }) => ({ hsCode, description, quantity, rate })),
         includeVat: canChargeVat && form.includeVat,
         currency: form.currency,
         markPaid: form.documentKind === "RECEIPT",
@@ -246,9 +264,18 @@ export default function BillingPage() {
             <div className="grid grid-cols-12 gap-2 px-1 text-xs font-medium text-slate-500">
               <span className="col-span-2">H.S. Code</span>
               <span className="col-span-4">Description</span>
-              <span className="col-span-2">Qty</span>
-              <span className="col-span-2">Rate</span>
-              <span className="col-span-1">Amount</span>
+              <span className="col-span-1">Qty</span>
+              {form.includeVat ? (
+                <>
+                  <span className="col-span-2">Amount (client pays)</span>
+                  <span className="col-span-2">Taxable (auto)</span>
+                </>
+              ) : (
+                <>
+                  <span className="col-span-2">Rate</span>
+                  <span className="col-span-2">Amount</span>
+                </>
+              )}
               <span className="col-span-1"></span>
             </div>
             <div className="mt-1 space-y-2">
@@ -262,13 +289,26 @@ export default function BillingPage() {
                     className="col-span-4 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
                   <input required type="number" step="0.01" min="0" value={li.quantity}
                     onChange={(e) => updateLineItem(i, { quantity: e.target.value })}
-                    className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                  <input required type="number" step="0.01" min="0" value={li.rate}
-                    onChange={(e) => updateLineItem(i, { rate: e.target.value })}
-                    className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                  <span className="col-span-1 self-center text-sm text-slate-500">
-                    {((Number(li.quantity) || 0) * (Number(li.rate) || 0)).toFixed(2)}
-                  </span>
+                    className="col-span-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                  {form.includeVat ? (
+                    <>
+                      <input required type="number" step="0.01" min="0" placeholder="e.g. 25000" value={li.grossAmount}
+                        onChange={(e) => updateLineItem(i, { grossAmount: e.target.value })}
+                        className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                      <span className="col-span-2 self-center text-sm text-slate-500">
+                        {((Number(li.grossAmount) || 0) / (1 + VAT_RATE)).toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <input required type="number" step="0.01" min="0" value={li.rate}
+                        onChange={(e) => updateLineItem(i, { rate: e.target.value })}
+                        className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                      <span className="col-span-2 self-center text-sm text-slate-500">
+                        {((Number(li.quantity) || 0) * (Number(li.rate) || 0)).toFixed(2)}
+                      </span>
+                    </>
+                  )}
                   <button type="button" onClick={() => removeLineItem(i)} className="col-span-1 self-center text-slate-400 hover:text-red-600">
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -278,6 +318,11 @@ export default function BillingPage() {
             <button type="button" onClick={addLineItem} className="mt-2 text-xs font-medium text-indigo-600 hover:underline">
               + Add line item
             </button>
+            {form.includeVat && (
+              <p className="mt-2 text-xs text-slate-400">
+                Type what the client actually pays for each line — the taxable amount and 13% VAT are worked out automatically.
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
@@ -314,7 +359,7 @@ export default function BillingPage() {
               {form.includeVat && (
                 <>
                   <p className="text-slate-500">13% VAT: <span className="font-medium text-slate-800">{vatAmount.toFixed(2)}</span></p>
-                  <p className="text-slate-700">Grand amount: <span className="font-semibold">{grandTotal.toFixed(2)}</span></p>
+                  <p className="text-slate-700">Client pays: <span className="font-semibold">{grandTotal.toFixed(2)}</span></p>
                 </>
               )}
             </div>
